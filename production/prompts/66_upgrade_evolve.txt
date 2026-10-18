@@ -1,0 +1,20 @@
+subject_definitions:
+<Subject 1> is Eevee, the Pokémon shown in <Picture 1>: brown fox-like body, big ears, fluffy cream collar and bushy tail, with the same body shape, colors and markings.
+
+summary:
+[reference generation] A 6-second, 3-shot 16:9 3D-animated Pokémon clip: Eevee glows with evolution light. It contains ONLY the 3 shot(s) described below.
+
+retention_analysis:
+<Subject 1>: fully_preserved - body shape, colors and markings follow <Picture 1>.
+
+detailed_description:
+The target video is a high-quality 3D CG animation in the glossy style of modern Pokémon game cinematics: soft global illumination, vivid saturated colors, smooth subsurface shading, shallow depth of field, 16:9. Framing: medium shots and medium close-ups where the whole Pokémon, including the top of its head, ears or bulb, stays inside the frame and fills about half to two thirds of the frame height; face close-ups only where a shot says so; never a wide shot, never a tiny distant figure. Every Pokémon keeps its exact official body shape, colors and markings and keeps facing the camera or in clean profile; nobody turns around or twists its head backward. Expressions are cute, friendly and natural with soft smiling eyes unless a shot says otherwise, never angry-looking or creepy. No humans, no human hands, no trainers, no text, no letters, no logos, no UI elements on screen. The white background of the reference pictures is not used.
+[Shot 1] Face close-up of <Subject 1> closing its eyes as it starts glowing bright white.
+[Shot 2] At 00:02, the shot cuts to: close-up of the glowing white silhouette pulsing with rainbow rings of light.
+[Shot 3] At 00:04, the shot cuts to: a blinding burst of rainbow light and golden stars filling the frame.
+
+overall_soundscape:
+Evolution hum rising, crystal chimes, bright burst. No human voices.
+
+non_diegetic_music:
+Rising magical evolution music ending in a fanfare.

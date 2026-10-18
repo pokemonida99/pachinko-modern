@@ -1,0 +1,63 @@
+batch	name	sec	ref1	ref2	ref3
+1	15_idle_bulbasaur	8	s1.png		
+1	16_idle_pikachu	8	s4.png		
+1	17_idle_charizard_day	8	charizard.png		
+1	18_idle_squirtle	8	s3.png		
+1	19_idle_eevee	8	s5.png		
+1	20_idle_snorlax	8	s6.png		
+1	21_reach_bulbasaur	5	s1.png		
+1	22_reach_charmander	5	s2.png		
+1	23_reach_squirtle	5	s3.png		
+1	24_reach_pikachu	5	s4.png		
+1	25_reach_eevee	5	s5.png		
+1	26_reach_snorlax	5	s6.png		
+1	27_reach_meowth	5	s7.png		
+1	28_reach_gengar	5	s8.png		
+1	29_reach_mewtwo	5	s9.png		
+1	39_lose_partner	5	s4.png	s7.png	
+1	40_lose_wild	5	s6.png		
+1	68_round_dance	8	s4.png	s5.png	
+1	69_round_fly	8	charizard.png	s4.png	
+1	70_lose_partner_b	5	s2.png		
+1	71_lose_wild_b	5	s7.png		
+2	30_win_bulbasaur	6	s1.png	s3.png	
+2	31_win_charmander	6	s2.png	s1.png	
+2	32_win_squirtle	6	s3.png	s2.png	
+2	33_win_pikachu	6	s4.png	s7.png	
+2	34_win_eevee	6	s5.png	s8.png	
+2	35_cap_snorlax	6	s6.png		
+2	36_cap_meowth	6	s7.png		
+2	37_cap_gengar	6	s8.png		
+2	38_cap_mewtwo	6	s9.png		
+2	50_rush_blastoise_reach	6	charizard.png		
+2	51_rush_blastoise_win	5	charizard.png		
+2	52_rush_blastoise_lose	5	charizard.png		
+2	56_chain_ride	6	charizard.png	s4.png	
+2	57_chain_mega	6	charizard.png		
+2	58_chain_hooh	6	s4.png		
+2	59_rush_end	6	charizard.png		
+2	72_rush_last	5	charizard.png		
+3	41_sp_meowth_reach	10	s4.png	s7.png	
+3	42_sp_meowth_win	6	s4.png	s7.png	
+3	43_sp_meowth_lose	5	s4.png	s7.png	
+3	44_sp_dragonite_reach	10	s4.png		
+3	45_sp_dragonite_win	6	s4.png		
+3	46_sp_dragonite_lose	5	s4.png		
+3	47_spsp_birds_reach	12	s4.png		
+3	48_spsp_birds_win	6	s4.png		
+3	49_spsp_birds_lose	5	s4.png		
+3	67_round_end	5	s4.png		
+4	53_rush_gyarados_reach	6	charizard.png		
+4	54_rush_gyarados_win	5	charizard.png		
+4	55_rush_gyarados_lose	5	charizard.png		
+4	62_cutin_gold	5	s4.png		
+4	64_group_magikarp	5	s3.png		
+4	66_upgrade_evolve	6	s5.png		
+5	73_idle_charmander	8	s2.png		
+5	74_idle_meowth	8	s7.png		
+5	75_idle_gengar	8	s8.png		
+5	76_round_splash	8	s3.png	s1.png	
+9	60_cutin_blue	5	s3.png		
+9	61_cutin_green	5	s1.png		
+9	63_group_caterpie	5			
+9	65_premium_shiny	5			

@@ -1,0 +1,65 @@
+name	pick	note
+15_idle_bulbasaur	a	表情偏兇、球莖被切，可用
+16_idle_pikachu	a	耳尖被切，可用
+17_idle_charizard_day	a	b 翅膀被切
+18_idle_squirtle	b	a 後半變大頭特寫，b 保持全身衝浪
+19_idle_eevee	a	正面較可愛
+20_idle_snorlax	a	
+21_reach_bulbasaur	b	開頭有爆光再推近
+22_reach_charmander	b	a 第一格全黑
+23_reach_squirtle	a	噴水清楚
+24_reach_pikachu	a	
+25_reach_eevee	a	
+26_reach_snorlax	a	b 結尾變暗
+27_reach_meowth	b	a 第一格全黑
+28_reach_gengar	a	
+29_reach_mewtwo	a	
+39_lose_partner	a	b 白底
+40_lose_wild	b	看得到卡比獸在球裡
+70_lose_partner_b	a	
+71_lose_wild_b	a	
+68_round_dance	a	
+69_round_fly	a	
+30_win_bulbasaur	a	b 白底
+31_win_charmander	a	兩版都白底
+32_win_squirtle	b	森林背景
+33_win_pikachu	a	
+34_win_eevee	b	草地背景比較亮
+35_cap_snorlax	b	紅光吸入清楚
+36_cap_meowth	b	星星爆發
+37_cap_gengar	b	
+38_cap_mewtwo	a	
+50_rush_blastoise_reach	a	
+51_rush_blastoise_win	a	
+52_rush_blastoise_lose	a	白底
+56_chain_ride	b	
+57_chain_mega	a	
+58_chain_hooh	b	
+59_rush_end	a	
+72_rush_last	a	
+41_sp_meowth_reach	a	
+42_sp_meowth_win	b	喵喵掉球
+43_sp_meowth_lose	a	
+44_sp_dragonite_reach	b	H3 沒畫出快龍，畫成噴火龍；當作「噴火龍空中對決」
+45_sp_dragonite_win	a	
+46_sp_dragonite_lose	b	a 皮卡丘臉崩
+47_spsp_birds_reach	a	火焰鳥、急凍鳥都像
+48_spsp_birds_win	a	
+49_spsp_birds_lose	a	
+67_round_end	a	
+53_rush_gyarados_reach	a	
+54_rush_gyarados_win	a	
+55_rush_gyarados_lose	a	
+62_cutin_gold	a	
+64_group_magikarp	b	
+66_upgrade_evolve	a	
+60_cutin_blue	b	
+61_cutin_green	b	
+63_group_caterpie	a	
+65_premium_shiny	a	b 頭上有綠葉
+73_idle_charmander	a	
+74_idle_meowth	a	
+75_idle_gengar	a	
+76_round_splash	a	
+16_idle_pikachu	a	重跑版 v2_b 耳朵完整、比較好，但本機檔案被我誤刪；RunningHub 歷史記錄裡還有（06:19 那兩支），要換再下載
+15_idle_bulbasaur	a	重跑版沒有比較好，維持原版

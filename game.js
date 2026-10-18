@@ -6,11 +6,38 @@ const BR = 7;           // ball radius
 const PR = 4.2;         // peg radius
 const G = 1500;         // gravity px/s^2
 const FIRE_INTERVAL = 0.6; // s (100 balls/min)
-let POW_MIN = 80, POW_RANGE = 700, ROAD_GAP = 21, ROAD_END = 64, HESO_W = 16, FUNNEL = 70;
-const SAVE_KEY = 'pk_modern_v1';
+// POW_NOISE spreads each shot's speed so the START entry rate is flat (~7%) instead of jumping with tiny power changes
+let POW_MIN = 80, POW_RANGE = 700, POW_NOISE = 40, ROAD_GAP = 21, ROAD_END = 64, HESO_W = 14, FUNNEL = 70;
+const POWER_L = 0.25, POWER_R = 0.6;   // 左打ち／右打ち are fixed powers
+const SAVE_KEY = 'pk_modern_v2', START_BALLS = 2000, LEND = 500;
 const P_NORMAL = 1 / 99, P_RUSH = 1 / 12, ST_SPINS = 20;
 
-const CLIPS = ['01_idle','02_group','03_cutin','04_sp_reach','05_sp_win','06_sp_lose','07_spsp_reach','08_spsp_win','09_spsp_lose','10_zenkaiten','11_jackpot','12_rush_in','13_rush_loop','14_premium'];
+// every clip that exists in assets/clips (add new names here when a clip is added)
+const CLIPS = ['01_idle','02_group','03_cutin','04_sp_reach','05_sp_win','06_sp_lose','07_spsp_reach','08_spsp_win','09_spsp_lose','10_zenkaiten','11_jackpot','12_rush_in','13_rush_loop','14_premium','15_idle_bulbasaur','16_idle_pikachu','17_idle_charizard_day','18_idle_squirtle','19_idle_eevee','20_idle_snorlax','21_reach_bulbasaur','22_reach_charmander','23_reach_squirtle','24_reach_pikachu','25_reach_eevee','26_reach_snorlax','27_reach_meowth','28_reach_gengar','29_reach_mewtwo','30_win_bulbasaur','31_win_charmander','32_win_squirtle','33_win_pikachu','34_win_eevee','35_cap_snorlax','36_cap_meowth','37_cap_gengar','38_cap_mewtwo','39_lose_partner','40_lose_wild','41_sp_meowth_reach','42_sp_meowth_win','43_sp_meowth_lose','44_sp_dragonite_reach','45_sp_dragonite_win','46_sp_dragonite_lose','47_spsp_birds_reach','48_spsp_birds_win','49_spsp_birds_lose','50_rush_blastoise_reach','51_rush_blastoise_win','52_rush_blastoise_lose','53_rush_gyarados_reach','54_rush_gyarados_win','55_rush_gyarados_lose','56_chain_ride','57_chain_mega','58_chain_hooh','59_rush_end','60_cutin_blue','61_cutin_green','62_cutin_gold','63_group_caterpie','64_group_magikarp','65_premium_shiny','66_upgrade_evolve','67_round_end','68_round_dance','69_round_fly','70_lose_partner_b','71_lose_wild_b','72_rush_last','73_idle_charmander','74_idle_meowth','75_idle_gengar','76_round_splash'];
+const HAVE = new Set(CLIPS);
+const has = n => HAVE.has(n);
+const firstHave = (...ns) => ns.find(has) || null;
+const anyHave = ns => { const ok = ns.filter(has); return ok.length ? ok[rnd() * ok.length | 0] : null; };
+// clip names by role; missing ones are skipped
+const IDLE = ['01_idle', '15_idle_bulbasaur', '16_idle_pikachu', '17_idle_charizard_day', '18_idle_squirtle', '19_idle_eevee', '20_idle_snorlax', '73_idle_charmander', '74_idle_meowth', '75_idle_gengar'];
+const SYM_NAME = [null, 'bulbasaur', 'charmander', 'squirtle', 'pikachu', 'eevee', 'snorlax', 'meowth', 'gengar', 'mewtwo'];
+const REACH_CLIP = n => `${20 + n}_reach_${SYM_NAME[n]}`;
+const WIN_CLIP = n => n <= 5 ? `${29 + n}_win_${SYM_NAME[n]}` : `${29 + n}_cap_${SYM_NAME[n]}`;
+const LOSE_CLIPS = n => n <= 5 ? ['39_lose_partner', '70_lose_partner_b'] : ['40_lose_wild', '71_lose_wild_b'];
+const ROUND_BG = ['68_round_dance', '69_round_fly', '76_round_splash', '11_jackpot'];
+const RUSH_LINES = [['50_rush_blastoise_reach', '51_rush_blastoise_win', '52_rush_blastoise_lose'], ['53_rush_gyarados_reach', '54_rush_gyarados_win', '55_rush_gyarados_lose']];
+const PARTNER = n => n <= 5;
+const CUT_CLIP = { blue: '60_cutin_blue', green: '61_cutin_green', red: '03_cutin', gold: '62_cutin_gold' };
+const GROUP_CLIP = { cater: '63_group_caterpie', pidgey: '02_group', magi: '64_group_magikarp' };
+// SP／SPSP 線：[開始, 勝, 敗]; weights make the lines differ in 信賴度 (weak → strong)
+const SP_LINES = {
+  meowth: ['41_sp_meowth_reach', '42_sp_meowth_win', '43_sp_meowth_lose'],
+  gengar: ['04_sp_reach', '05_sp_win', '06_sp_lose'],
+  sky: ['44_sp_dragonite_reach', '45_sp_dragonite_win', '46_sp_dragonite_lose'],
+  mewtwo: ['07_spsp_reach', '08_spsp_win', '09_spsp_lose'],
+  birds: ['47_spsp_birds_reach', '48_spsp_birds_win', '49_spsp_birds_lose'],
+};
+const LINE_W = { sp: { hit: { meowth: 15, gengar: 35, sky: 50 }, miss: { meowth: 50, gengar: 35, sky: 15 } }, spsp: { hit: { mewtwo: 45, birds: 55 }, miss: { mewtwo: 60, birds: 40 } } };
 const UI = ['board_bg','btn_push','logo','txt_chance','txt_gekiatsu','txt_next','txt_ooatari','txt_rush','txt_reach','txt_zenkaiten','hold_white','hold_blue','hold_green','hold_red','hold_gold','hold_rainbow'];
 const HOLD_GLOW = {white:'#ffffff',blue:'#3a8bff',green:'#2fe06a',red:'#ff3048',gold:'#ffc61a',rainbow:'#ff6bff'};
 
@@ -18,32 +45,51 @@ const HOLD_GLOW = {white:'#ffffff',blue:'#3a8bff',green:'#2fe06a',red:'#ff3048',
 const $ = id => document.getElementById(id);
 const cv = $('board'), ctx = cv.getContext('2d');
 const elBalls = $('balls'), elMode = $('mode'), elModeTxt = $('modeTxt');
-const elPower = $('power'), elFire = $('fire'), elPush = $('push');
+const elFire = $('fire'), elPush = $('push');
 
 // ---------- assets ----------
-const IMG = {}, VID = {};
+const IMG = {};
 let loadCount = 0;
 const totalLoad = UI.length + 9;
 function onLoaded() { loadCount++; $('loadTxt').textContent = loadCount >= totalLoad ? '準備完成' : `載入中… ${loadCount}/${totalLoad}`; }
 for (const n of UI) { const i = new Image(); i.onload = onLoaded; i.onerror = onLoaded; i.src = `assets/ui/${n}.webp`; IMG[n] = i; }
 const SYM = [];
 for (let k = 1; k <= 9; k++) { const i = new Image(); i.onload = onLoaded; i.onerror = onLoaded; i.src = `assets/sym/s${k}.webp`; SYM[k] = i; }
-for (const n of CLIPS) {
+// Videos load on demand into a small pool of <video> elements. All pool elements are unlocked for sound in the
+// start tap, then reused by swapping src, so 60+ clips never download at once.
+const POOL = [];
+for (let i = 0; i < 6; i++) {
   const v = document.createElement('video');
-  v.src = `assets/clips/${n}.mp4`; v.preload = 'auto'; v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
-  $('vids').appendChild(v); VID[n] = v;
+  v.preload = 'auto'; v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
+  $('vids').appendChild(v); POOL.push({ v, name: null, used: 0 });
 }
+const VID = new Proxy({}, { get: (_, n) => typeof n === 'string' && has(n) ? vidEl(n) : undefined, has: (_, n) => has(n) });
+function inUse(n) { return n && (n === st.bg || n === st.fg || n === st.hold || n === st.next); }
+function vidEl(n) {
+  let s = POOL.find(p => p.name === n);
+  if (!s) {
+    s = POOL.filter(p => !inUse(p.name)).sort((a, b) => a.used - b.used)[0] || POOL[0];
+    s.v.pause(); s.name = n; s.v.src = `assets/clips/${n}.mp4`; s.v.load();
+    s.v.volume = S.mute ? 0 : S.volVid / 100; s.v.muted = S.mute;
+  }
+  s.used = performance.now();
+  return s.v;
+}
+function prefetch(n) { if (n && has(n) && !POOL.some(p => p.name === n)) vidEl(n); }
 
 // ---------- persistent state ----------
 const save = (() => { try { if (location.search.includes('reset')) localStorage.removeItem(SAVE_KEY); return JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { return null; } })();
+const STATS0 = { spins: 0, spinsNormal: 0, spinsRush: 0, hits: 0, firstHits: 0, rushHits: 0, rush: 0, rushEnds: 0, chainSum: 0, maxChain: 0, fired: 0, firedNormal: 0, got: 0, invest: START_BALLS, bestBalls: START_BALLS, hamari: 0, maxHamari: 0, bestSingle: 0, bestRush: 0, symHit: {}, eff: {}, playSec: 0 };
 const S = {
-  balls: save?.balls ?? 1000,
-  stats: save?.stats ?? { spins: 0, hits: 0, rush: 0, maxChain: 0, fired: 0, bestBalls: 1000 },
+  balls: save?.balls ?? START_BALLS,
+  stats: Object.assign({}, STATS0, save?.stats),
   hist: save?.hist ?? [],
-  volVid: save?.volVid ?? 80, volSfx: save?.volSfx ?? 60, mute: save?.mute ?? false, skip: save?.skip ?? '0',
+  slump: save?.slump ?? [0], slumpBase: save?.slumpBase ?? 0, slumpHits: save?.slumpHits ?? [],
+  ach: save?.ach ?? {},
+  volVid: save?.volVid ?? 80, volSfx: save?.volSfx ?? 60, mute: save?.mute ?? false, skip: save?.skip ?? '1', autoSide: save?.autoSide ?? true,
 };
 let dirty = true;
-function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ balls: S.balls, stats: S.stats, hist: S.hist.slice(0, 40), volVid: S.volVid, volSfx: S.volSfx, mute: S.mute, skip: S.skip })); } catch (e) {} }
+function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ balls: S.balls, stats: S.stats, hist: S.hist.slice(0, 40), slump: S.slump, slumpBase: S.slumpBase, slumpHits: S.slumpHits.slice(-200), ach: S.ach, volVid: S.volVid, volSfx: S.volSfx, mute: S.mute, skip: S.skip, autoSide: S.autoSide })); } catch (e) {} }
 setInterval(() => { if (dirty) { persist(); dirty = false; } }, 2000);
 
 // ---------- runtime state ----------
@@ -54,9 +100,9 @@ const st = {
   rush: false, stLeft: 0, chain: 0,
   denchu: { open: false, t: 0, pending: 0 }, attacker: { open: false, count: 0 },
   round: null, payoutRound: 0,
-  reels: [mkReel(), mkReel(), mkReel()], reelMode: 'big', reelMix: 1, reelMarks: null,
+  reels: [mkReel(), mkReel(), mkReel()], reelMode: 'mini', reelMix: 1, reelMarks: null,
   overlays: [], particles: [], flash: 0, flashCol: '#fff', shake: 0, ledMode: 'normal',
-  fg: null, bg: null, pushWait: null, step: null, banner: null, gijiCount: 0,
+  fg: null, bg: null, hold: null, next: null, pushWait: null, rushSum: null, fullT: -9, skipAt: 0, rushTotal: 0, step: null, banner: null, gijiCount: 0,
   waiters: [], force: null, rightHint: 0,
 };
 function mkReel() { return { spin: false, pos: Math.random() * 9, speed: 0, num: 1 + (Math.random() * 9 | 0), bounce: 0, q: false, sync: false }; }
@@ -75,8 +121,7 @@ function initAudio() {
 }
 function applyVolume() {
   if (sfxGain) sfxGain.gain.value = S.mute ? 0 : S.volSfx / 100 * 0.6;
-  for (const n in VID) VID[n].volume = S.mute ? 0 : S.volVid / 100;
-  for (const n in VID) VID[n].muted = S.mute;
+  for (const p of POOL) { p.v.volume = S.mute ? 0 : S.volVid / 100; p.v.muted = S.mute; }
   $('btnSound').textContent = S.mute ? '🔇' : '🔊';
 }
 function tone(f, dur, type = 'square', vol = 0.2, f2 = null, delay = 0) {
@@ -118,13 +163,16 @@ const SFX = {
 // ---------- layout ----------
 let H = 1100, scale = 1, dpr = 1, geo = null;
 function resize() {
-  const r = $('stage').getBoundingClientRect();
-  const sw = Math.max(200, r.width - 8), sh = Math.max(200, r.height - 8);
+  // the gold frame hugs the board: measure the free cabinet area, then size frame = canvas + frame padding
+  const cab = $('cabinet'), fr = $('frame'), cs = getComputedStyle(cab), pad = parseFloat(getComputedStyle(fr).paddingLeft) || 0;
+  const r = cab.getBoundingClientRect();
+  const sw = Math.max(200, r.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - pad * 2), sh = Math.max(200, r.height - pad * 2);
   const nh = Math.round(Math.min(1300, Math.max(1000, W * sh / sw)));
   scale = Math.min(sw / W, sh / nh);
   dpr = Math.min(2, window.devicePixelRatio || 1);
   cv.style.width = Math.floor(W * scale) + 'px'; cv.style.height = Math.floor(nh * scale) + 'px';
   cv.width = Math.round(W * scale * dpr); cv.height = Math.round(nh * scale * dpr);
+  fr.style.width = Math.floor(W * scale) + pad * 2 + 'px'; fr.style.height = Math.floor(nh * scale) + pad * 2 + 'px';
   if (nh !== H || !geo) { H = nh; buildGeo(); }
 }
 window.addEventListener('resize', resize);
@@ -185,9 +233,9 @@ function buildGeo() {
 
 // ---------- balls & physics ----------
 function launch() {
-  if (S.balls <= 0) { setFiring(false); banner('持ち玉不足 — 選單可補充', 2200); return; }
-  S.balls--; S.stats.fired++; dirty = true;
-  const a1 = Math.PI * 1.30, v0 = POW_MIN + POW_RANGE * st.power + (rnd() - 0.5) * 14;
+  if (S.balls <= 0) { setFiring(false); banner('持ち玉不足 — 按「借玉」', 2200); $('lend').classList.add('hot'); return; }
+  S.balls--; if (!simMode) { S.stats.fired++; if (!st.rush && !st.inJackpot) S.stats.firedNormal++; } dirty = true;
+  const a1 = Math.PI * 1.30, v0 = POW_MIN + POW_RANGE * st.power + (rnd() - 0.5) * POW_NOISE;
   st.balls.push({ x: geo.L + 9, y: H - 40, vx: 0, vy: 0, rail: 0, a1, v0, life: 0, onFloor: false });
   SFX.launch();
 }
@@ -282,82 +330,100 @@ function checkTargets(b) {
   if (b.y > g.out || b.life > 30) return false;
   return true;
 }
-function pay(n) { S.balls += n; dirty = true; if (!simMode) SFX.pay(); }
+function pay(n) { S.balls += n; dirty = true; if (!simMode) { S.stats.got += n; SFX.pay(); } }
 
 // ---------- entries & 抽選 ----------
 const simStats = { heso: 0, denchu: 0, att: 0, gate: 0 };
-function onHeso() {
-  simStats.heso++; pay(3); if (!simMode) SFX.heso();
-  addHold('heso');
-}
+function onHeso() { simStats.heso++; pay(3); if (!simMode) SFX.heso(); addHold('heso'); }
 function onDenchu() { simStats.denchu++; pay(1); if (!simMode) SFX.denchu(); addHold('denchu'); }
-function onAttacker() { simStats.att++; S.balls += 15; dirty = true; st.payoutRound += 15; st.attacker.count++; if (!simMode) SFX.pay(); }
+function onAttacker() { simStats.att++; pay(15); st.payoutRound += 15; st.attacker.count++; }
 function onGate() {
   simStats.gate++;
   if (st.denchu.open || st.denchu.pending) return;
-  if (st.rush) { st.denchu.pending = 1; wait(250).then(() => { st.denchu.pending = 0; openDenchu(1.8); }); }
+  if (st.rush && st.stLeft > 0) { st.denchu.pending = 1; wait(250).then(() => { st.denchu.pending = 0; openDenchu(1.8); }); }
   else if (rnd() < 1 / 30) { openDenchu(0.35); }
 }
 function openDenchu(sec) { st.denchu.open = true; st.denchu.t = sec; if (!simMode) SFX.open(); }
 
 function addHold(src) {
   if (simMode) return;
-  if (st.holds.length >= 4) return;
-  const h = makeHold(src);
-  st.holds.push(h);
+  if (st.holds.length >= 4) { st.fullT = st.time; return; }
+  st.holds.push(makeHold(src));
 }
-function makeHold(src) {
-  const rush = st.rush;
+function makeHold(src, rush = st.rush && st.stLeft > 0) {   // holds taken after the last ST spin draw at normal odds
   let hit = rnd() < (rush ? P_RUSH : P_NORMAL);
   const f = st.force; if (f) { hit = f.hit; }
-  const h = { hit, rush, src, rounds: 0, rushAfter: false, reach: 'none', color: 'white', group: false, step: 0, giji: 0, cutin: false, premium: false, nums: [1, 2, 3], born: st.time };
+  const h = { hit, rush, src, rounds: 0, rushAfter: false, reach: 'none', color: 'white', group: false, step: 0, giji: 0, cutin: false, premium: false, revive: false, line: 0, nums: [1, 2, 3] };
   if (hit) {
-    if (rush) { h.rounds = rnd() < 0.7 ? 10 : 3; h.rushAfter = true; }
-    else if (rnd() < 0.5) { h.rounds = 10; h.rushAfter = true; } else { h.rounds = 3; h.rushAfter = false; }
+    h.rounds = rush ? (rnd() < 0.7 ? 10 : 3) : (rnd() < 0.5 ? 10 : 3);
+    if (f?.num) h.rounds = f.num % 2 ? 10 : 3;   // debug: a forced number decides 10R/3R like a real draw
+    h.rushAfter = rush || h.rounds === 10;
   }
   if (!rush) {
-    h.reach = hit ? pick({ normal: 10, sp: 35, spsp: 50, zen: 5 }) : (rnd() < 0.10 ? pick({ normal: 70, sp: 25, spsp: 5 }) : 'none');
-    h.color = hit ? pick({ white: 30, blue: 20, green: 20, red: 18, gold: 10, rainbow: 2 }) : pick({ white: 90, blue: 7, green: 2.5, red: 0.5 });
-    h.group = rnd() < (hit ? 0.25 : h.reach !== 'none' ? 0.05 : 0.005);
-    h.step = +(hit ? pick({ 0: 20, 1: 10, 2: 10, 3: 20, 4: 20, 5: 20 }) : h.reach !== 'none' ? pick({ 0: 50, 1: 25, 2: 15, 3: 7, 4: 2.5, 5: 0.5 }) : pick({ 0: 85, 1: 12, 2: 3 }));
-    h.giji = +(hit ? pick({ 0: 25, 1: 45, 2: 30 }) : h.reach !== 'none' ? pick({ 0: 80, 1: 17, 2: 3 }) : pick({ 0: 97, 1: 3 }));
+    h.reach = hit ? pick({ normal: 10, sp: 35, spsp: 50, zen: 5 }) : (rnd() < 0.18 ? pick({ normal: 80, sp: 17, spsp: 3 }) : 'none');
+    const none = h.reach === 'none';
+    h.color = hit ? pick({ white: 30, blue: 20, green: 20, red: 18, gold: 10, rainbow: 2 }) : none ? pick({ white: 85, blue: 11, green: 3.5, red: 0.5 }) : pick({ white: 90, blue: 7, green: 2.5, red: 0.5 });
+    h.group = rnd() < (hit ? 0.25 : none ? 0.015 : 0.05);
+    h.step = +(hit ? pick({ 0: 20, 1: 10, 2: 10, 3: 20, 4: 20, 5: 20 }) : none ? pick({ 0: 70, 1: 22, 2: 7, 3: 1 }) : pick({ 0: 50, 1: 25, 2: 15, 3: 7, 4: 2.5, 5: 0.5 }));
+    h.giji = +(hit ? pick({ 0: 25, 1: 45, 2: 30 }) : none ? pick({ 0: 95, 1: 5 }) : pick({ 0: 80, 1: 17, 2: 3 }));
     h.cutin = (h.reach === 'sp' || h.reach === 'spsp') && rnd() < (hit ? 0.4 : 0.08);
+    if (h.cutin) h.cutCol = pick(hit ? { blue: 15, green: 20, red: 35, gold: 30 } : { blue: 45, green: 35, red: 18, gold: 2 });
+    if (h.group) h.groupKind = pick(hit ? { cater: 20, pidgey: 35, magi: 45 } : { cater: 50, pidgey: 35, magi: 15 });
+    h.upgrade = hit && h.rounds === 3 && rnd() < 0.2;   // 昇格: a 3R that turns into RUSH at the end
     h.premium = hit && rnd() < 0.03;
+    h.revive = hit && (h.reach === 'sp' || h.reach === 'spsp') && rnd() < 0.1;
+    if (LINE_W[h.reach]) { const w = Object.assign({}, LINE_W[h.reach][hit ? 'hit' : 'miss']); for (const k in w) if (!SP_LINES[k].every(has)) delete w[k]; h.spLine = Object.keys(w).length ? pick(w) : (h.reach === 'sp' ? 'gengar' : 'mewtwo'); }
   } else {
     h.reach = hit ? pick({ instant: 30, normal: 30, sp: 40 }) : (rnd() < 0.12 ? pick({ normal: 80, sp: 20 }) : 'none');
     h.color = hit ? pick({ white: 40, blue: 20, red: 25, gold: 15 }) : pick({ white: 95, blue: 5 });
+    h.line = rnd() * RUSH_LINES.length | 0;
   }
-  if (f) { if (f.reach) h.reach = f.reach; for (const k of ['premium', 'group', 'cutin', 'step', 'giji', 'color']) if (f[k] !== undefined) h[k] = f[k]; if (!f.keep) st.force = null; }
-  // final numbers
+  if (f) { if (f.reach) h.reach = f.reach; for (const k of ['premium', 'group', 'cutin', 'step', 'giji', 'color', 'revive', 'spLine']) if (f[k] !== undefined) h[k] = f[k];
+    if ((h.reach === 'sp' || h.reach === 'spsp') && !rush && !SP_LINES[h.spLine]) h.spLine = h.reach === 'sp' ? 'gengar' : 'mewtwo'; if (!f.keep) st.force = null; }
+  // final numbers: odd = 10R (RUSH), even = 3R
   const r9 = () => 1 + (rnd() * 9 | 0);
   if (hit) {
     const odd = [1, 3, 5, 7, 9], even = [2, 4, 6, 8];
-    const n = h.rushAfter ? odd[rnd() * 5 | 0] : even[rnd() * 4 | 0];
+    const n = f?.num ?? (h.rounds === 10 ? odd[rnd() * 5 | 0] : even[rnd() * 4 | 0]);
     h.nums = [n, n, n];
   } else if (h.reach !== 'none') {
-    const n = r9(); let c = rnd() < 0.7 ? ((n % 9) + 1) : r9(); if (c === n) c = (n % 9) + 1;
+    const n = f?.num ?? r9(); let c = rnd() < 0.7 ? ((n % 9) + 1) : r9(); if (c === n) c = (n % 9) + 1;
     h.nums = [n, c, n];
   } else {
     const a = r9(); let b = r9(); if (b === a) b = (a % 9) + 1; h.nums = [a, r9(), b];
   }
   return h;
 }
+// 實測信賴度: count each effect (通常時 only) and how many of those were hits
+function tally(key, hit) { const e = S.stats.eff[key] || (S.stats.eff[key] = [0, 0]); e[0]++; if (hit) e[1]++; }
 
 // ---------- video helpers ----------
+function resumeBg() { if (st.bg && !st.fg && !st.paused && has(st.bg)) VID[st.bg].play().catch(() => {}); }
+function nextIdle(cur = st.bg) {
+  const ok = IDLE.filter(has), pool = ok.filter(n => n !== cur);
+  return pool.length ? pool[rnd() * pool.length | 0] : ok[0];
+}
 function setBg(name) {
   st.hold = null;
-  if (st.bg === name) return;
-  if (st.bg && VID[st.bg] && st.bg !== st.fg) VID[st.bg].pause();
-  st.bg = name;
-  if (!name) return;
-  const v = VID[name]; v.loop = true;
-  if (!st.fg) { v.play().catch(() => {}); }
+  if (name === 'idle') name = nextIdle();
+  if (st.bg === name) { resumeBg(); return; }
+  const old = st.bg; st.bg = name; st.next = null;
+  if (old && old !== st.fg && has(old)) VID[old].pause();
+  if (!name || !has(name)) return;
+  const idle = IDLE.includes(name);
+  const v = VID[name]; v.loop = !idle || IDLE.filter(has).length < 2;
+  try { v.currentTime = 0; } catch (e) {}
+  if (!st.fg && !st.paused) v.play().catch(() => {});
+  if (idle && !v.loop) { st.next = nextIdle(name); prefetch(st.next); }
 }
+// idle clips rotate: when one ends, the next random lead takes over
+for (const q of POOL) q.v.addEventListener('ended', () => { if (q.name === st.bg && IDLE.includes(q.name) && !st.fg) setBg(st.next || 'idle'); });
 function playClip(name, opts = {}) {
+  if (!name || !has(name)) return Promise.resolve(false);
   return new Promise(resolve => {
     const v = VID[name];
-    if (st.bg && VID[st.bg]) VID[st.bg].pause();
-    v.loop = false; v.currentTime = 0;
+    if (st.bg && st.bg !== name && has(st.bg)) VID[st.bg].pause();
+    v.loop = false; try { v.currentTime = 0; } catch (e) {}
     st.fg = name; st.hold = null;
     let done = false;
     const fin = () => {
@@ -367,14 +433,15 @@ function playClip(name, opts = {}) {
       if (st.fg === name) st.fg = null;
       if (opts.hold) st.hold = name;
       st.skipFn = null;
-      if (!opts.keepBgPaused && st.bg && !st.fg && !st.paused) VID[st.bg].play().catch(() => {});
-      resolve();
+      if (!opts.keepBgPaused) resumeBg();
+      resolve(true);
     };
     v.addEventListener('ended', fin);
-    st.skipFn = S.skip === '1' ? fin : null;
+    st.skipFn = S.skip === '1' ? fin : null; st.skipAt = st.time + 3;
     v.play().catch(() => { wait(1500).then(fin); });
-    const dur = (isFinite(v.duration) && v.duration > 0 ? v.duration : 13) + 3;
+    const dur = opts.max ? opts.max / 1000 : (isFinite(v.duration) && v.duration > 0 ? v.duration : 13) + 3;
     wait(dur * 1000).then(fin);
+    if (opts.next) prefetch(opts.next);
   });
 }
 
@@ -393,15 +460,36 @@ function reelsQ() { for (const r of st.reels) { r.spin = false; r.q = true; r.sy
 // ---------- spin sequence (変動) ----------
 async function runSpin(h) {
   st.busy = true; st.current = h;
-  S.stats.spins++; dirty = true;
-  if (st.rush) st.stLeft = Math.max(0, st.stLeft - 1);
-  st.reelMode = 'big';
+  const s = S.stats;
+  s.spins++; dirty = true;
+  const residual = st.rush && st.stLeft <= 0;          // 殘保留 after the last ST spin
+  if (st.rush) { s.spinsRush++; if (!residual) st.stLeft--; }
+  else { s.spinsNormal++; s.hamari++; s.maxHamari = Math.max(s.maxHamari, s.hamari); }
+  pushSlump();
+  if (!h.rush) {
+    if (h.color !== 'white') tally('hold_' + h.color, h.hit);
+    if (h.group) { tally('group', h.hit); tally('group_' + h.groupKind, h.hit); }
+    if (h.step >= 3) tally('step' + h.step, h.hit);
+    if (h.giji) tally('giji' + (h.giji + 1), h.hit);
+    if (h.premium) tally('premium', h.hit);
+    if (h.reach !== 'none') tally('reach_' + h.reach, h.hit);
+    if (h.cutin) { tally('cutin_' + h.reach, h.hit); tally('cut_' + h.cutCol, h.hit); }
+    if (h.spLine) tally('line_' + h.spLine, h.hit);
+    if (h.color === 'rainbow') unlock('rainbow');
+    if (h.color === 'gold') unlock('gold');
+  }
+  const last = st.rush && !residual && st.stLeft === 0;
+  const fx = h.reach !== 'none' || h.step || h.giji;
+  st.reelMode = 'mini';        // idle and plain spins keep the reels small so the idle clips stay visible
   startReels();
+  if (last) { banner('最後一轉！', 1600, '#ff4a5a'); await playClip('72_rush_last', { max: 3000 }); }
+  else if (residual) banner('殘保留', 1000, '#ffd23f');
   const fast = st.holds.length >= 3;
-  if (h.premium) { st.reelMode = 'mini'; await playClip('14_premium'); st.reelMode = 'big'; doFlash('#ff9cff', 0.8); }
-  if (h.group) { st.reelMode = 'mini'; await playClip('02_group'); st.reelMode = 'big'; }
-  if (h.step > 0) await stepUp(h.step);
+  if (h.premium) { await playClip(anyHave(['14_premium', '65_premium_shiny'])); doFlash('#ff9cff', 0.8); unlock('premium'); }
+  if (h.group) await playClip(firstHave(GROUP_CLIP[h.groupKind], '02_group'));
+  if (h.step > 0) { st.reelMode = 'big'; await stepUp(h.step); }
   for (let g = 0; g < h.giji; g++) {
+    st.reelMode = 'big';
     await wait(1100);
     const a = 1 + (rnd() * 9 | 0);
     stopReel(0, a); await wait(220); stopReel(2, (a % 9) + 1); await wait(200);
@@ -411,30 +499,53 @@ async function runSpin(h) {
     st.gijiCount = g + 2; banner(`×${g + 2}`, 1200, '#5ff');
     startReels();
   }
-  const base = st.rush ? 900 : h.reach !== 'none' || h.step || h.giji ? 1800 : fast ? 1300 : 3200;
-  if (h.reach === 'zen') { await zenkaiten(h); return finishSpin(h); }
+  const base = st.rush ? 900 : fx ? 1800 : fast ? 1000 : 2400;
+  if (h.reach === 'zen') { st.reelMode = 'big'; await zenkaiten(h); return finishSpin(h); }
   if (h.reach === 'instant') { await wait(base); doFlash('#ffd23f', 0.6); reelsQ(); await wait(300); return finishSpin(h); }
   await wait(base);
   stopReel(0, h.nums[0]); await wait(st.rush ? 250 : 550);
   stopReel(2, h.nums[2]);
   if (h.reach !== 'none') {
+    const n = h.nums[0];
     await wait(250);
     card(IMG.txt_reach, 1300); SFX.reach(); st.ledMode = 'reach';
-    await wait(1300);
+    // the Pokémon of the reach number shows up (聽牌登場)
+    if (has(REACH_CLIP(n))) { st.reelMode = 'mini'; await playClip(REACH_CLIP(n), { keepBgPaused: true, hold: true, max: 3800 }); }
+    else await wait(1300);
     if (h.reach === 'normal') {
+      st.reelMode = 'big';
       slowReel(1, 5); await wait(1400); slowReel(1, 2.2); await wait(1600);
-      if (h.hit) reelsQ(); else stopReel(1, h.nums[1]);
+      if (h.hit) reelsQ();
+      else {
+        stopReel(1, h.nums[1]);
+        const lc = !st.rush && anyHave(LOSE_CLIPS(n));
+        if (lc) { await wait(450); st.reelMode = 'mini'; await playClip(lc, { keepBgPaused: true, hold: true }); }
+        await wait(300); st.hold = null; resumeBg();
+      }
     } else {
-      if (h.cutin) { st.reelMode = 'mini'; await playClip('03_cutin', { keepBgPaused: true, hold: true }); card(IMG.txt_gekiatsu, 1500); await wait(1500); }
       const sp = h.reach === 'sp';
+      const lines = RUSH_LINES.filter(x => x.every(has));
+      const rl = st.rush && sp && lines.length ? lines[h.line % lines.length] : null;
+      const L = rl || SP_LINES[h.spLine] || (sp ? SP_LINES.gengar : SP_LINES.mewtwo);
+      if (h.cutin) { st.reelMode = 'mini'; await playClip(firstHave(CUT_CLIP[h.cutCol], '03_cutin'), { keepBgPaused: true, hold: true }); if (h.cutCol === 'red' || h.cutCol === 'gold') { card(IMG.txt_gekiatsu, 1500); await wait(1500); } }
       card(sp ? IMG.txt_chance : IMG.txt_gekiatsu, 1300); await wait(1100);
       st.reelMode = 'mini'; slowReel(1, 9);
-      await playClip(sp ? '04_sp_reach' : '07_spsp_reach', { keepBgPaused: true, hold: true });
-      await pushChance();
-      await playClip(h.hit ? (sp ? '05_sp_win' : '08_spsp_win') : (sp ? '06_sp_lose' : '09_spsp_lose'), { keepBgPaused: true, hold: true });
+      const win = h.hit && !h.revive;
+      await playClip(L[0], { keepBgPaused: true, hold: true, next: win ? (rl ? L[1] : WIN_CLIP(n)) : L[2] });
+      await pushChance(st.rush ? 2000 : 2500);
+      if (win) {
+        // SP／SPSP success goes straight to the number's own win clip in jackpot(); RUSH lines show Charizard winning first
+        if (rl) await playClip(L[1], { keepBgPaused: true, hold: true });
+      } else {
+        await playClip(L[2], { keepBgPaused: true, hold: true });
+        if (h.revive) {                         // 復活: the lose clip plays, then the Pokémon gets back up
+          await wait(700); doFlash('#ffd23f'); banner('復活！', 1600, '#ffd23f'); SFX.fanfare();
+          await playClip(L[1], { keepBgPaused: true, hold: true }); unlock('revive');
+        }
+      }
       st.reelMode = 'big';
       if (h.hit) reelsQ(); else stopReel(1, h.nums[1]);
-      if (!h.hit) { await wait(600); st.hold = null; if (st.bg) VID[st.bg].play().catch(() => {}); }
+      if (!h.hit) { await wait(600); st.hold = null; resumeBg(); if (h.reach === 'spsp') bump('spspLose'); }
     }
   } else {
     await wait(st.rush ? 200 : 450);
@@ -450,25 +561,29 @@ async function finishSpin(h) {
   else {
     st.reelMarks = null;
     await wait(st.rush ? 250 : 500);
-    if (st.rush && st.stLeft <= 0) await endRush();
+    // RUSH ends only after the 殘保留 drawn during RUSH are used up
+    if (st.rush && st.stLeft <= 0 && !st.holds.some(x => x.rush)) await endRush();
   }
-  if (st.hold) { st.hold = null; if (st.bg && !st.fg && !st.paused) VID[st.bg].play().catch(() => {}); }
-  st.current = null; st.busy = false; st.reelMode = 'big';
+  if (st.hold) { st.hold = null; resumeBg(); }
+  st.current = null; st.busy = false; st.reelMode = 'mini';
+  checkAch();
 }
 async function stepUp(level) {
   for (let l = 1; l <= level; l++) { st.step = { l, t0: st.time }; SFX.step(l); await wait(520); }
   await wait(380); st.step = null;
 }
-async function pushChance() {
+async function pushChance(ms = 2500) {
   elPush.classList.add('live');
-  st.pushArmed = true;
-  await new Promise(res => { st.pushWait = res; wait(4500).then(() => { if (st.pushWait === res) { st.pushWait = null; res(); } }); });
-  elPush.classList.remove('live'); st.pushArmed = false;
+  st.pushArmed = true; st.pushT0 = st.time;
+  const pressed = await new Promise(res => { st.pushWait = () => res(true); wait(ms).then(() => { if (st.pushArmed) { st.pushWait = null; res(false); } }); });
+  elPush.classList.remove('live'); st.pushArmed = false; st.pushWait = null;
+  st.shake = 0.3; await wait(250);
   SFX.push(); doFlash('#fff', 0.7);
+  if (pressed && st.current?.hit) unlock('push');
 }
 function pressPush() {
-  if (st.pushWait) { const r = st.pushWait; st.pushWait = null; r(); return; }
-  if (st.fg && st.skipFn) { st.skipFn(); return; }
+  if (st.pushWait) { st.pushWait(); return; }
+  if (st.fg && st.skipFn && st.time >= st.skipAt) { st.skipFn(); return; }
   // free push: a small light show on the LCD
   burst(16, W / 2, geo.lcd.y1 - 20, ['#ffd23f', '#fff', '#4aa8ff']); SFX.card();
 }
@@ -478,19 +593,23 @@ async function zenkaiten(h) {
   card(IMG.txt_zenkaiten, 1600);
   for (const r of st.reels) { r.sync = true; r.speed = 7; }
   st.reelMode = 'mini';
-  await playClip('10_zenkaiten', { keepBgPaused: true, hold: true });
+  await playClip('10_zenkaiten', { keepBgPaused: true, hold: true, next: WIN_CLIP(h.nums[0]) });
   st.reelMode = 'big';
   reelsQ();
   await wait(400);
+  unlock('zen');
 }
 
 // ---------- 大当り ----------
 async function jackpot(h) {
   st.inJackpot = true; st.busy = true;
+  const wasRush = st.rush, n = h.nums[0], s = S.stats;
+  autoSide(true);
   // ？？？ → flash → reveal
   for (const r of st.reels) r.q = true;
   st.reelMode = 'big';
   SFX.tension();
+  prefetch(WIN_CLIP(n));
   await wait(1400);
   doFlash('#fff'); st.shake = 0.7;
   for (let i = 0; i < 3; i++) { st.reels[i].q = false; st.reels[i].num = h.nums[i]; st.reels[i].bounce = 1.4; }
@@ -498,56 +617,134 @@ async function jackpot(h) {
   card(IMG.txt_ooatari, 2200, { s: 0.95 }); SFX.fanfare(); st.ledMode = 'jackpot';
   burst(90, W / 2, geo.lcd.y0 + 150, ['#ffd23f', '#ff6bff', '#5ff', '#fff', '#ff4a5a']);
   await wait(1800);
-  S.stats.hits++; st.chain = (st.rush || h.rush) ? st.chain + 1 : 1; S.stats.maxChain = Math.max(S.stats.maxChain, st.chain);
+  const ham = s.hamari;
+  s.hits++; if (wasRush) s.rushHits++; else s.firstHits++;
+  s.hamari = 0; s.symHit[n] = (s.symHit[n] || 0) + 1;
+  st.chain = wasRush ? st.chain + 1 : 1; s.maxChain = Math.max(s.maxChain, st.chain);
+  S.slumpHits.push(s.spins);
+  if (!wasRush && ham >= 300) unlock('hamari300');
+  if (!wasRush && ham <= 10) unlock('quick');
+  // tell 3R and RUSH apart with fixed text, in ball counts
+  banner(h.rounds === 10 ? (wasRush ? `${st.chain} 連！10R（約 1,500 玉）` : '10R＋RUSH 突入確定！') : (wasRush ? `${st.chain} 連！3R（約 450 玉）` : '3R（約 450 玉）'), 2200, h.rounds === 10 ? '#ffd23f' : '#9ad0ff');
+  // the clip: a chain milestone in RUSH, otherwise the number's own Pokémon wins or gets caught
+  let clip = null;
+  if (wasRush) clip = st.chain === 2 ? '56_chain_ride' : st.chain === 5 ? '57_chain_mega' : st.chain >= 10 && st.chain % 5 === 0 ? '58_chain_hooh' : null;
+  if (!has(clip)) clip = firstHave(WIN_CLIP(n), '11_jackpot');
   st.reelMode = 'mini';
-  await playClip('11_jackpot');
+  await playClip(clip, { next: ROUND_BG.find(has) });
   // rounds
-  setBg('11_jackpot');
+  const rbg = ROUND_BG.filter(has);
   const startBalls = S.balls;
   st.payoutRound = 0;
   for (let r = 1; r <= h.rounds; r++) {
+    if (r % 3 === 1) setBg(rbg[((r - 1) / 3 + s.hits) % rbg.length]);
     st.round = { r, of: h.rounds };
     st.attacker.open = true; st.attacker.count = 0; SFX.open();
     const t0 = st.time;
+    if (location.search.includes('fast')) { pay(150); st.payoutRound += 150; st.attacker.count = 10; }   // test switch: finish rounds at once
     while (st.attacker.count < 10 && st.time - t0 < 25) await wait(100);
     st.attacker.open = false;
     await wait(r < h.rounds ? 1200 : 600);
   }
   st.round = null;
-  const got = S.balls - startBalls;
-  st.rushTotal = (st.rush || h.rushAfter ? (st.rushTotal || 0) : 0) + st.payoutRound;
+  void startBalls;
+  if (h.upgrade && !wasRush) {
+    st.reelMode = 'mini'; doFlash('#ffffff');
+    await playClip('66_upgrade_evolve');
+    h.rushAfter = true; banner('昇格！RUSH 突入', 2200, '#ffd23f'); SFX.fanfare(); unlock('upgrade');
+  }
+  st.rushTotal = (wasRush || h.rushAfter ? (st.rushTotal || 0) : 0) + st.payoutRound;
   st.result = { got: st.payoutRound, rounds: h.rounds, chain: st.chain, total: st.rushTotal, rush: h.rushAfter, t0: st.time };
   SFX.fanfare();
   await wait(3200);
   st.result = null;
-  S.hist.unshift({ t: new Date().toLocaleString('zh-TW', { hour12: false }), r: h.rounds, rush: h.rushAfter, chain: st.chain, got: st.payoutRound });
+  s.bestSingle = Math.max(s.bestSingle, st.payoutRound);
+  S.hist.unshift({ t: new Date().toLocaleString('zh-TW', { hour12: false }), r: h.rounds, rush: h.rushAfter, chain: st.chain, got: st.payoutRound, ham: wasRush ? null : ham, sym: n, line: h.reach });
+  if (S.hist.length > 40) S.hist.length = 40;
   dirty = true;
   if (h.rushAfter) {
-    if (!st.rush) {
-      S.stats.rush++;
+    if (!wasRush) {
+      s.rush++;
       setBg(null);
       st.reelMode = 'mini';
       card(IMG.txt_rush, 2400, { s: 0.95 });
       await playClip('12_rush_in');
       st.rush = true;
+      unlock('rush');
     } else banner('RUSH 繼續！', 1800, '#ffd23f');
     st.stLeft = ST_SPINS;
     st.ledMode = 'rush';
     setBg('13_rush_loop');
   } else {
     st.rush = false; st.chain = 0; st.rushTotal = 0; st.ledMode = 'normal';
-    setBg('01_idle');
+    setBg(null);
+    await playClip('67_round_end');
+    setBg('idle');
     banner('回到通常模式', 1800);
+    autoSide(false);
   }
   st.inJackpot = false;
-  st.reelMode = 'big';
-  void got;
+  st.reelMode = 'mini';
+  unlock('first');
+  checkAch();
 }
 async function endRush() {
-  banner(`RUSH 結束　累計 ${(st.rushTotal || 0).toLocaleString()} 玉`, 2600, '#ff8a96');
-  st.rush = false; st.chain = 0; st.rushTotal = 0; st.ledMode = 'normal';
-  setBg('01_idle');
-  await wait(1500);
+  const s = S.stats, total = st.rushTotal || 0, chain = st.chain;
+  s.rushEnds++; s.chainSum += chain; s.bestRush = Math.max(s.bestRush, total);
+  const best = total >= s.bestRush && s.rushEnds > 1;
+  st.rush = false; st.ledMode = 'normal';
+  setBg(null);
+  await playClip('59_rush_end', { keepBgPaused: true, hold: true });
+  st.rushSum = { chain, total, best, t0: st.time };
+  SFX.fanfare();
+  await wait(4000);
+  st.rushSum = null; st.hold = null;
+  st.chain = 0; st.rushTotal = 0;
+  setBg('idle');
+  autoSide(false);
+  checkAch();
+}
+
+// ---------- slump graph & achievements ----------
+function pushSlump() {
+  S.slump.push(S.balls - S.stats.invest);
+  if (S.slump.length > 3000) { S.slump.shift(); S.slumpBase++; }
+}
+function bump(k) { S.stats[k] = (S.stats[k] || 0) + 1; }
+const ACH = [
+  ['first', '初當り', '第一次大当り'],
+  ['rush', 'RUSH 突入', '第一次進入雷光 RUSH'],
+  ['chain5', '五連荘', 'RUSH 連續 5 次大当り', () => st.chain >= 5],
+  ['chain10', '十連荘', 'RUSH 連續 10 次大当り', () => st.chain >= 10],
+  ['chain20', '二十連荘', 'RUSH 連續 20 次大当り', () => st.chain >= 20],
+  ['rush10k', '萬發', '一次 RUSH 拿到 10,000 玉以上', () => (st.rushTotal || 0) >= 10000],
+  ['balls10k', '鋼珠山', '持ち玉達到 10,000 顆', () => S.balls >= 10000],
+  ['plus10k', '人生勝利組', '收支 +10,000 玉', () => S.balls - S.stats.invest >= 10000],
+  ['quick', '秒中', '10 轉以內中大当り'],
+  ['hamari300', 'ハマリ脫出', '300 轉以上沒中之後中大当り'],
+  ['deep', '深淵', '連續 500 轉沒中大当り', () => S.stats.hamari >= 500],
+  ['push', '親手揭曉', '自己按 PUSH，結果是大当り'],
+  ['revive', '復活', '看到寶可夢再站起來'],
+  ['upgrade', '進化昇格', '3R 最後進化成 RUSH'],
+  ['zen', '全回轉', '看到夢幻全回轉'],
+  ['premium', '夢幻泡泡', '看到プレミア演出'],
+  ['gold', '金保留', '看到金色保留'],
+  ['rainbow', '虹保留', '看到彩虹保留'],
+  ['allsym', '圖柄全收集', '9 隻圖柄寶可夢各中過一次', () => [1, 2, 3, 4, 5, 6, 7, 8, 9].every(k => S.stats.symHit[k])],
+  ['mewtwo10', '超夢又跑了', 'SPSP 超夢失敗 10 次', () => (S.stats.spspLose || 0) >= 10],
+  ['hits100', '常客', '累計 100 次大当り', () => S.stats.hits >= 100],
+  ['spins10k', '萬轉', '累計轉 10,000 次', () => S.stats.spins >= 10000],
+];
+function unlock(id) {
+  if (S.ach[id]) return;
+  const a = ACH.find(x => x[0] === id); if (!a) return;
+  S.ach[id] = Date.now(); dirty = true;
+  toast(`🏆 成就達成：${a[1]}`);
+}
+function checkAch() { for (const a of ACH) if (a[3] && !S.ach[a[0]] && a[3]()) unlock(a[0]); }
+function toast(t) {
+  const el = document.createElement('div'); el.className = 'toast'; el.textContent = t;
+  $('toasts').appendChild(el); setTimeout(() => el.classList.add('out'), 3200); setTimeout(() => el.remove(), 3800);
 }
 
 // ---------- main loop ----------
@@ -586,16 +783,21 @@ function update(dt) {
   const isRight = st.power > 0.4;
   st.rightHint = needRight && !isRight ? 1 : (!needRight && isRight ? -1 : 0);
   updateHud();
-  S.stats.bestBalls = Math.max(S.stats.bestBalls, S.balls);
+  if (S.balls > S.stats.bestBalls) S.stats.bestBalls = S.balls;
 }
 let hudCache = '';
 function updateHud() {
-  const k = `${S.balls}|${st.rush}|${st.stLeft}|${st.inJackpot}|${st.firing}|${st.rightHint}|${st.power > 0.4}`;
+  const s = S.stats, right = st.power > 0.4;
+  const k = `${S.balls}|${st.rush}|${st.stLeft}|${st.inJackpot}|${st.rightHint}|${right}|${s.hits}|${s.spins}|${s.hamari}|${st.chain}`;
   if (k === hudCache) return; hudCache = k;
   elBalls.textContent = S.balls.toLocaleString();
+  const diff = S.balls - s.invest; $('diff').textContent = signed(diff); $('diff').className = diff >= 0 ? 'pos' : 'neg';
   elMode.classList.toggle('rush', st.rush || st.inJackpot);
-  elModeTxt.textContent = st.inJackpot ? '大当り' : st.rush ? `RUSH 殘${st.stLeft}` : '通常';
-  $('labL').classList.toggle('on', st.power <= 0.4); $('labR').classList.toggle('on', st.power > 0.4);
+  $('frame').classList.toggle('rush', st.rush || st.inJackpot);
+  elModeTxt.textContent = st.inJackpot ? '大当り' : st.rush ? (st.stLeft > 0 ? `RUSH 殘${st.stLeft}` : '殘保留') : '通常';
+  $('cHits').textContent = s.hits; $('cRush').textContent = s.rush; $('cSpins').textContent = s.spins; $('cNow').textContent = st.rush ? st.chain + '連' : s.hamari;
+  $('cNowL').textContent = st.rush ? 'RUSH' : '現在';
+  $('sideL').classList.toggle('want', st.rightHint === -1); $('sideR').classList.toggle('want', st.rightHint === 1);
 }
 
 // ---------- rendering ----------
@@ -715,6 +917,7 @@ function drawLCD() {
   if (st.step) drawStep(l, w, h);
   if (st.round) drawRound(l, w, h);
   if (st.result) drawResult(l, w, h);
+  if (st.rushSum) drawRushSum(l, w, h);
   if (st.pushArmed) {
     const s = 120 + Math.sin(st.time * 18) * 10, b = IMG.btn_push;
     ctx.globalCompositeOperation = 'screen'; if (b.complete) ctx.drawImage(b, l.x0 + w / 2 - s / 2, l.y0 + h / 2 - s / 2, s, s); ctx.globalCompositeOperation = 'source-over';
@@ -744,6 +947,7 @@ function drawLCD() {
     if (hd) drawHold(hd.color, x, hy, 13); else { ctx.strokeStyle = '#ffffff22'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, hy, 9, 0, 6.283); ctx.stroke(); }
   }
   if (st.current) drawHold(st.current.color, l.x0 + w / 2, hy, 16 + Math.sin(st.time * 8) * 1.5);
+  if (st.holds.length >= 4 && st.time - st.fullT < 1.5) { ctx.textAlign = 'left'; ctx.font = '900 13px "PingFang TC",sans-serif'; ctx.fillStyle = (st.time * 6 | 0) % 2 ? '#ffd23f' : '#fff'; ctx.fillText('保留滿', l.x0 + 56 + 4 * 34 - 8, hy); }
   // status at right
   ctx.textAlign = 'right'; ctx.fillStyle = st.rush ? '#ff6b7a' : '#9ad0ff'; ctx.font = '800 13px sans-serif';
   ctx.fillText(st.inJackpot ? `大当り中 出玉 ${st.payoutRound}` : st.rush ? `RUSH 殘 ${st.stLeft} 回・累計 ${(st.rushTotal || 0).toLocaleString()} 玉` : `1/99`, l.x1 - 4, hy);
@@ -759,7 +963,7 @@ function drawHold(color, x, y, r) {
 function drawReels(l, w, h) {
   const m = st.reelMix; // 1 big, 0 mini
   const big = { x: l.x0 + w * 0.08, y: l.y0 + h * 0.2, cw: w * 0.28, ch: h * 0.6, gap: w * 0.02 };
-  const mini = { x: l.x0 + 8, y: l.y0 + 8, cw: 46, ch: 54, gap: 4 };
+  const mini = { x: l.x0 + 10, y: l.y0 + 10, cw: 60, ch: 70, gap: 5 };
   const lerp = (a, b) => a * (1 - m) + b * m;
   const cw = lerp(mini.cw, big.cw), ch = lerp(mini.ch, big.ch), gap = lerp(mini.gap, big.gap), x0 = lerp(mini.x, big.x), y0 = lerp(mini.y, big.y);
   const idleDim = !st.fg && m > 0.5;
@@ -819,9 +1023,24 @@ function drawResult(l, w, h) {
   ctx.font = '900 66px "Arial Black",sans-serif'; ctx.fillStyle = `hsl(${45 + Math.sin(st.time * 6) * 8} 100% 60%)`;
   ctx.lineWidth = 6; ctx.strokeStyle = '#000'; ctx.strokeText(`${shown.toLocaleString()} 玉`, cx, l.y0 + h * 0.47); ctx.fillText(`${shown.toLocaleString()} 玉`, cx, l.y0 + h * 0.47);
   ctx.font = '800 22px "PingFang TC",sans-serif'; ctx.fillStyle = r.rush ? '#ff6b7a' : '#9ad0ff';
-  ctx.fillText(r.rush ? `${r.chain} 連　RUSH 累計 ${r.total.toLocaleString()} 玉` : '通常大当り（不進 RUSH）', cx, l.y0 + h * 0.72);
+  ctx.fillText(r.rush ? `${r.chain} 連　RUSH 累計 ${r.total.toLocaleString()} 玉` : '3R 當り・回到通常模式', cx, l.y0 + h * 0.72);
   ctx.font = '700 16px "PingFang TC",sans-serif'; ctx.fillStyle = '#ccc';
   ctx.fillText(`持ち玉 ${S.balls.toLocaleString()}`, cx, l.y0 + h * 0.88);
+}
+function drawRushSum(l, w, h) {
+  const r = st.rushSum, k = Math.min(1, (st.time - r.t0) / 1.2), shown = Math.round(r.total * k);
+  ctx.fillStyle = '#000d'; ctx.fillRect(l.x0, l.y0, w, h);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const cx = l.x0 + w / 2;
+  ctx.font = '900 30px "PingFang TC","Noto Sans TC",sans-serif'; ctx.fillStyle = '#ff8a96';
+  ctx.fillText('雷光 RUSH 終了', cx, l.y0 + h * 0.17);
+  ctx.font = '900 54px "Arial Black",sans-serif'; ctx.fillStyle = '#fff'; ctx.lineWidth = 6; ctx.strokeStyle = '#000';
+  ctx.strokeText(`${r.chain} 連`, cx, l.y0 + h * 0.38); ctx.fillText(`${r.chain} 連`, cx, l.y0 + h * 0.38);
+  ctx.font = '900 46px "Arial Black",sans-serif'; ctx.fillStyle = `hsl(${45 + Math.sin(st.time * 6) * 8} 100% 60%)`;
+  ctx.strokeText(`${shown.toLocaleString()} 玉`, cx, l.y0 + h * 0.6); ctx.fillText(`${shown.toLocaleString()} 玉`, cx, l.y0 + h * 0.6);
+  ctx.font = '800 20px "PingFang TC",sans-serif'; ctx.fillStyle = r.best ? '#ffd23f' : '#ccc';
+  ctx.fillText(r.best ? '★ RUSH 最高紀錄更新！' : `RUSH 最高紀錄 ${S.stats.bestRush.toLocaleString()} 玉`, cx, l.y0 + h * 0.8);
+  ctx.font = '700 16px "PingFang TC",sans-serif'; ctx.fillStyle = '#ccc';
+  ctx.fillText(`持ち玉 ${S.balls.toLocaleString()}`, cx, l.y0 + h * 0.92);
 }
 function drawRound(l, w, h) {
   ctx.fillStyle = '#0008'; ctx.fillRect(l.x0, l.y1 - 74, w, 74);
@@ -833,20 +1052,25 @@ function drawRound(l, w, h) {
 }
 
 // ---------- UI ----------
-function setFiring(on) { st.firing = on; elFire.classList.toggle('on', on); elFire.innerHTML = on ? '發射中<br><small>點擊停止</small>' : '發射<br><small>點擊開始</small>'; if (on) st.fireT = 0; }
+function setFiring(on) { st.firing = on; elFire.classList.toggle('on', on); elFire.querySelector('b').textContent = on ? '發射中' : '發射'; elFire.querySelector('small').textContent = on ? '點擊停止' : '點擊開始'; if (on) st.fireT = 0; }
+function setSide(right) { st.power = right ? POWER_R : POWER_L; $('sideL').classList.toggle('on', !right); $('sideR').classList.toggle('on', right); hudCache = ''; }
+function autoSide(right) { if (S.autoSide) setSide(right); }
 elFire.addEventListener('click', () => setFiring(!st.firing));
-elPower.addEventListener('input', () => { st.power = elPower.value / 100; });
+$('sideL').addEventListener('click', () => setSide(false));
+$('sideR').addEventListener('click', () => setSide(true));
+$('lend').addEventListener('click', () => { S.balls += LEND; S.stats.invest += LEND; dirty = true; $('lend').classList.remove('hot'); toast(`借玉 ${LEND} 顆`); renderStats(); });
 elPush.addEventListener('click', pressPush);
 cv.addEventListener('pointerdown', e => {
   const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / scale, y = (e.clientY - r.top) / scale, l = geo.lcd;
   if (x > l.x0 && x < l.x1 && y > l.y0 && y < l.y1) pressPush();
 });
 document.addEventListener('keydown', e => {
-  if (!st.started) return;
+  if (!st.started || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
   if (e.code === 'Space') { e.preventDefault(); setFiring(!st.firing); }
-  else if (e.code === 'ArrowLeft') { elPower.value = Math.max(0, +elPower.value - 5); st.power = elPower.value / 100; }
-  else if (e.code === 'ArrowRight') { elPower.value = Math.min(100, +elPower.value + 5); st.power = elPower.value / 100; }
-  else if (e.code === 'Enter') pressPush();
+  else if (e.code === 'ArrowLeft') setSide(false);
+  else if (e.code === 'ArrowRight') setSide(true);
+  else if (e.code === 'Enter' || e.code === 'KeyZ') pressPush();
+  else if (e.code === 'KeyB') $('lend').click();
   else if (e.code === 'KeyP') togglePause();
 });
 function togglePause(force) {
@@ -854,38 +1078,110 @@ function togglePause(force) {
   st.paused = p; $('pauseOv').classList.toggle('hide', !p);
   $('btnPause').textContent = p ? '▶' : '⏸';
   const v = (st.fg && VID[st.fg]) || (st.bg && VID[st.bg]);
-  if (p) { for (const n in VID) VID[n].pause(); if (AC) AC.suspend(); }
+  if (p) { for (const q of POOL) q.v.pause(); if (AC) AC.suspend(); }
   else { if (v) v.play().catch(() => {}); if (AC) AC.resume(); last = performance.now(); }
 }
 $('btnPause').addEventListener('click', () => togglePause());
 $('btnResume').addEventListener('click', () => togglePause(false));
 document.addEventListener('visibilitychange', () => { if (document.hidden && st.started && !st.paused && !location.search.includes('test')) togglePause(true); });
 $('btnSound').addEventListener('click', () => { S.mute = !S.mute; applyVolume(); dirty = true; });
-const openDrawer = o => { $('drawer').classList.toggle('open', o); $('scrim').classList.toggle('on', o); if (o) renderStats(); };
-$('btnMenu').addEventListener('click', () => openDrawer(true));
-$('btnClose').addEventListener('click', () => openDrawer(false));
-$('scrim').addEventListener('click', () => openDrawer(false));
-$('volVid').value = S.volVid; $('volSfx').value = S.volSfx; $('optSkip').value = S.skip;
+// narrow screens: the two side panels slide in as sheets
+const openSheet = id => { for (const x of ['left', 'right']) $(x).classList.toggle('open', x === id); $('scrim').classList.toggle('on', !!id); if (id) renderStats(); };
+$('btnStats').addEventListener('click', () => openSheet('left'));
+$('btnMenu').addEventListener('click', () => openSheet('right'));
+for (const b of document.querySelectorAll('.sheetClose')) b.addEventListener('click', () => openSheet(null));
+$('scrim').addEventListener('click', () => openSheet(null));
+$('volVid').value = S.volVid; $('volSfx').value = S.volSfx; $('optSkip').checked = S.skip === '1'; $('optAuto').checked = S.autoSide;
 $('volVid').addEventListener('input', e => { S.volVid = +e.target.value; applyVolume(); dirty = true; });
 $('volSfx').addEventListener('input', e => { S.volSfx = +e.target.value; applyVolume(); dirty = true; });
-$('optSkip').addEventListener('change', e => { S.skip = e.target.value; dirty = true; });
-$('btnRefill').addEventListener('click', () => { S.balls += 1000; dirty = true; renderStats(); });
-$('btnReset').addEventListener('click', () => { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} location.href = location.pathname; });
+$('optSkip').addEventListener('change', e => { S.skip = e.target.checked ? '1' : '0'; dirty = true; });
+$('optAuto').addEventListener('change', e => { S.autoSide = e.target.checked; dirty = true; });
+$('btnReset').addEventListener('click', () => { if (!confirm('清除所有存檔、統計和成就，從頭開始？')) return; try { localStorage.removeItem(SAVE_KEY); } catch (e) {} location.href = location.pathname; });
+
+// theoretical 信賴度 from the draw tables (通常時), computed once at load
+const THEORY = (() => {
+  const t = {}, add = (k, hit) => { const e = t[k] || (t[k] = [0, 0]); e[0]++; if (hit) e[1]++; };
+  const keep = st.force; st.force = null;
+  for (let i = 0; i < 200000; i++) {
+    const h = makeHold('sim', false);
+    if (h.color !== 'white') add('hold_' + h.color, h.hit);
+    if (h.group) { add('group', h.hit); add('group_' + h.groupKind, h.hit); }
+    if (h.step >= 3) add('step' + h.step, h.hit);
+    if (h.giji) add('giji' + (h.giji + 1), h.hit);
+    if (h.reach !== 'none') add('reach_' + h.reach, h.hit);
+    if (h.cutin) { add('cutin_' + h.reach, h.hit); add('cut_' + h.cutCol, h.hit); }
+    if (h.spLine) add('line_' + h.spLine, h.hit);
+  }
+  st.force = keep;
+  return t;
+})();
+const TRUST_ROWS = [
+  ['reach_normal', 'ノーマルリーチ'], ['reach_sp', 'SP リーチ（全部）'], ['line_meowth', '　SP 喵喵搶球'], ['line_gengar', '　SP 耿鬼'], ['line_sky', '　SP 噴火龍空中戰'], ['reach_spsp', 'SPSP リーチ（全部）'], ['line_mewtwo', '　SPSP 超夢'], ['line_birds', '　SPSP 三神鳥'], ['cutin_sp', 'SP＋紅カットイン'], ['cutin_spsp', 'SPSP＋紅カットイン'],
+  ['cut_blue', '藍カットイン（傑尼龜）'], ['cut_green', '綠カットイン（妙蛙種子）'], ['cut_red', '紅カットイン（噴火龍）'], ['cut_gold', '金カットイン（皮卡丘）'],
+  ['group', '群予告（全部）'], ['group_cater', '　綠毛蟲'], ['group_pidgey', '　波波'], ['group_magi', '　鯉魚王'], ['giji2', '擬似連 ×2'], ['giji3', '擬似連 ×3'], ['step3', 'STEP 3'], ['step4', 'STEP 4'], ['step5', 'STEP 5'],
+  ['hold_blue', '藍保留'], ['hold_green', '綠保留'], ['hold_red', '紅保留'], ['hold_gold', '金保留'], ['hold_rainbow', '虹保留'],
+];
+const pct = (a, b) => b ? (a / b * 100) : null;
+const fmtP = v => v == null ? '—' : v >= 99.95 ? '必中' : v < 1 ? v.toFixed(1) + '%' : Math.round(v) + '%';
+const num = n => (n ?? 0).toLocaleString();
+const rateP = v => v == null ? '—' : Math.round(v) + '%';
+const signed = n => (n > 0 ? '+' : '') + n.toLocaleString();
 function renderStats() {
-  const s = S.stats;
-  $('stats').innerHTML = [['持ち玉', S.balls.toLocaleString()], ['最高持ち玉', s.bestBalls.toLocaleString()], ['發射數', s.fired.toLocaleString()], ['總回轉', s.spins], ['大当り', s.hits], ['RUSH 突入', s.rush], ['最高連荘', s.maxChain], ['目前', st.rush ? `RUSH（${st.chain} 連）` : '通常']]
-    .map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('');
-  $('hist').innerHTML = S.hist.length ? S.hist.map(x => `<div>${x.t}｜${x.r}R${x.rush ? '＋RUSH' : ''}｜${x.chain} 連｜+${x.got}</div>`).join('') : '還沒有大当り';
+  const s = S.stats, diff = S.balls - s.invest;
+  $('tHits').textContent = s.hits; $('tFirst').textContent = s.firstHits; $('tSpins').textContent = num(s.spins); $('tChain').textContent = s.maxChain;
+  const prob = s.firstHits ? `1/${(s.spinsNormal / s.firstHits).toFixed(1)}` : '—';
+  const rate = s.firedNormal >= 250 ? (s.spinsNormal / s.firedNormal * 250).toFixed(1) + ' 轉' : '—';
+  const rows = [
+    ['投資（開局＋借玉）', num(s.invest)], ['持ち玉', num(S.balls)], ['收支', `<b class="${diff >= 0 ? 'pos' : 'neg'}">${signed(diff)}</b>`],
+    ['發射', num(s.fired)], ['獲得', num(s.got)], ['現在ハマリ', `${s.hamari} 轉`], ['最大ハマリ', `${s.maxHamari} 轉`],
+    ['初当り確率（實測）', `${prob}<small> / 理論 1/99</small>`], ['回転率（每 250 顆）', rate],
+    ['RUSH 突入率', s.firstHits ? `${rateP(pct(s.rush, s.firstHits))}<small> / 理論 60%</small>` : '—'],
+    ['ST 継続率', s.rushEnds + s.rushHits ? `${rateP(pct(s.rushHits, s.rushHits + s.rushEnds))}<small> / 理論 82%</small>` : '—'],
+    ['平均連荘', s.rushEnds ? (s.chainSum / s.rushEnds).toFixed(1) + ' 連' : '—'],
+    ['單次最高出玉', num(s.bestSingle)], ['RUSH 最高出玉', num(s.bestRush)], ['遊玩時間', fmtTime(s.playSec)],
+  ];
+  $('stats').innerHTML = rows.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('');
+  $('hist').innerHTML = S.hist.length ? S.hist.map(x => `<tr><td>${x.chain > 1 ? x.chain + ' 連' : x.ham != null ? x.ham + ' 轉' : ''}</td><td>${x.sym ? `<img src="assets/sym/s${x.sym}.webp" alt="">${x.sym}` : ''}</td><td>${x.r}R${x.rush ? '<i>RUSH</i>' : ''}</td><td>+${num(x.got)}</td></tr>`).join('') : '<tr><td colspan="4" class="dim">還沒有大当り</td></tr>';
+  $('trust').innerHTML = '<tr><th>演出</th><th>理論</th><th>你的</th></tr>' + TRUST_ROWS.map(([k, label]) => {
+    const t = THEORY[k], m = s.eff[k];
+    return `<tr><td>${label}</td><td>${t ? fmtP(pct(t[1], t[0])) : '—'}</td><td>${m ? `${rateP(pct(m[1], m[0]))}<small> (${m[1]}/${m[0]})</small>` : '—'}</td></tr>`;
+  }).join('') + '<tr><td>全回轉（夢幻）</td><td>必中</td><td>—</td></tr><tr><td>夢幻泡泡（プレミア）</td><td>必中</td><td>—</td></tr>';
+  $('achN').textContent = `${Object.keys(S.ach).length} / ${ACH.length}`;
+  $('ach').innerHTML = ACH.map(([id, name, desc]) => `<li class="${S.ach[id] ? 'got' : ''}"><span>${S.ach[id] ? '🏆' : '🔒'}</span><b>${name}</b><small>${desc}</small></li>`).join('');
+  drawSlump();
 }
+function fmtTime(sec) { sec = sec | 0; const h = sec / 3600 | 0, m = (sec % 3600) / 60 | 0; return h ? `${h} 小時 ${m} 分` : `${m} 分`; }
+function drawSlump() {
+  const c = $('slump'), r = c.getBoundingClientRect(); if (!r.width) return;
+  const d = Math.min(2, devicePixelRatio || 1); c.width = r.width * d; c.height = r.height * d;
+  const g = c.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0);
+  const w = r.width, h = r.height, pts = S.slump.length ? S.slump : [0];
+  let lo = Math.min(0, ...pts), hi = Math.max(0, ...pts); const pad = Math.max(200, (hi - lo) * 0.1); lo -= pad; hi += pad;
+  const X = i => 6 + (w - 12) * (pts.length < 2 ? 0 : i / (pts.length - 1)), Y = v => h - 14 - (h - 24) * (v - lo) / (hi - lo);
+  g.clearRect(0, 0, w, h);
+  g.strokeStyle = '#ffffff1a'; g.lineWidth = 1; g.font = '10px system-ui'; g.fillStyle = '#9a93c4'; g.textBaseline = 'middle';
+  const step = Math.pow(10, Math.floor(Math.log10((hi - lo) / 2))) * (((hi - lo) / Math.pow(10, Math.floor(Math.log10((hi - lo) / 2)))) > 10 ? 5 : 2);
+  for (let v = Math.ceil(lo / step) * step; v < hi; v += step) { g.beginPath(); g.moveTo(0, Y(v)); g.lineTo(w, Y(v)); g.stroke(); g.fillText(signed(v), 4, Y(v) - 6); }
+  g.strokeStyle = '#ffffff55'; g.beginPath(); g.moveTo(0, Y(0)); g.lineTo(w, Y(0)); g.stroke();
+  for (const sp of S.slumpHits) { const i = sp - 1 - S.slumpBase; if (i < 0 || i >= pts.length) continue; g.fillStyle = '#ffd23f33'; g.fillRect(X(i) - 1, 4, 2, h - 18); }
+  const last = pts[pts.length - 1];
+  g.strokeStyle = last >= 0 ? '#ffd23f' : '#4aa8ff'; g.lineWidth = 2; g.lineJoin = 'round';
+  g.beginPath(); pts.forEach((v, i) => i ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v))); g.stroke();
+  g.fillStyle = '#9a93c4'; g.textAlign = 'right'; g.fillText(`${num(S.slumpBase + pts.length - 1)} 轉`, w - 4, h - 6); g.textAlign = 'left';
+}
+setInterval(() => { if (st.started && !st.paused) { S.stats.playSec += 1; } if (st.started && (innerWidth >= 1180 || $('left').classList.contains('open') || $('right').classList.contains('open'))) renderStats(); }, 1000);
+window.addEventListener('resize', () => drawSlump());
 $('btnStart').addEventListener('click', () => {
   initAudio(); if (AC && AC.state === 'suspended') AC.resume();
-  // unlock every <video> for sound playback inside this user gesture
-  for (const n in VID) { const v = VID[n]; v.muted = false; const p = v.play(); if (p) p.then(() => { if (st.fg !== n && st.bg !== n) { v.pause(); v.currentTime = 0; } }).catch(() => {}); }
+  // unlock every pool <video> for sound playback inside this user gesture
+  for (const q of POOL) { const v = q.v; if (!q.name) v.src = 'assets/clips/01_idle.mp4'; v.muted = false; const p = v.play(); if (p) p.then(() => { if (!inUse(q.name)) v.pause(); }).catch(() => {}); }
   applyVolume();
   $('startOv').classList.add('hide');
   st.started = true; last = performance.now();
-  setBg(null); setTimeout(() => setBg('01_idle'), 60);
+  setSide(false);
+  setBg(null); setTimeout(() => setBg('idle'), 60);
   setFiring(true);
+  renderStats();
 });
 
 // ---------- debug / test API ----------
@@ -894,7 +1190,8 @@ window.__pk = {
   force(reach, hit = true, extra = {}) { st.force = Object.assign({ reach, hit }, extra); return st.force; },
   hold(reach, hit = true, extra = {}) { st.force = Object.assign({ reach, hit }, extra); addHold('debug'); return st.holds.length; },
   give(n) { S.balls += n; },
-  pow(a, b) { POW_MIN = a; POW_RANGE = b; },
+  clips: () => [...HAVE], theory: () => THEORY,
+  pow(a, b, n) { POW_MIN = a; POW_RANGE = b; if (n !== undefined) POW_NOISE = n; },
   road(gap, end, hw) { ROAD_GAP = gap; ROAD_END = end; if (hw) HESO_W = hw; if (arguments.length > 3) FUNNEL = arguments[3]; buildGeo(); },
   trace(power = 0.3, sec = 8) { // path of one ball, sampled every 0.1 s
     simMode = true; const p0 = st.power; st.power = power; const keep = st.balls; st.balls = []; launch(); S.balls++;

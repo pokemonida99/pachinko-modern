@@ -1,0 +1,50 @@
+beedrill done 03:30
+bellsprout done 03:31
+geodude done 03:32
+spearow done 03:32
+rattata done 03:33
+hooh done 03:34
+dragonite done 03:35
+moltres done 03:35
+articuno done 03:36
+blastoise done 03:37
+gyarados done 03:37
+caterpie done 03:38
+magikarp done 03:39
+shiny_eevee done 03:39
+ALLDONE
+p1 beedrill 1 03:42
+p1 bellsprout 0 03:42
+p1 geodude 0 03:44
+p1 spearow 0 03:45
+p1 rattata 0 03:46
+p1 hooh 0 03:46
+p1 dragonite 0 03:47
+p1 moltres 0 03:48
+p1 articuno 0 03:49
+p1 blastoise 0 03:50
+p1 gyarados 0 03:51
+p1 magikarp 0 03:52
+p2 bellsprout 0 03:53
+p2 geodude 0 03:54
+p2 spearow 0 03:55
+p2 rattata 0 03:56
+p2 hooh 0 03:57
+p2 dragonite 0 03:58
+p2 moltres 0 03:59
+p2 articuno 0 04:01
+p2 blastoise 0 04:02
+p2 gyarados 0 04:03
+p2 magikarp 0 04:04
+p3 bellsprout 0 04:05
+p3 geodude 0 04:06
+p3 spearow 0 04:07
+p3 rattata 0 04:08
+p3 hooh 0 04:09
+p3 dragonite 0 04:10
+p3 moltres 0 04:11
+p3 articuno 0 04:12
+p3 blastoise 0 04:13
+p3 gyarados 0 04:14
+p3 magikarp 0 04:15
+p4 bellsprout 0 04:16

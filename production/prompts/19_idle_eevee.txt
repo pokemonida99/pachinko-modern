@@ -1,0 +1,18 @@
+subject_definitions:
+<Subject 1> is Eevee, the Pokémon shown in <Picture 1>: brown fox-like body, big ears, fluffy cream collar and bushy tail, with the same body shape, colors and markings.
+
+summary:
+[reference generation] A 8-second, 1-shot 16:9 3D-animated Pokémon clip: Eevee chases butterflies in a flower field. It contains ONLY the 1 shot(s) described below.
+
+retention_analysis:
+<Subject 1>: fully_preserved - body shape, colors and markings follow <Picture 1>.
+
+detailed_description:
+The target video is a high-quality 3D CG animation in the glossy style of modern Pokémon game cinematics: soft global illumination, vivid saturated colors, smooth subsurface shading, shallow depth of field, 16:9. Framing: medium shots and medium close-ups where the whole Pokémon, including the top of its head, ears or bulb, stays inside the frame and fills about half to two thirds of the frame height; face close-ups only where a shot says so; never a wide shot, never a tiny distant figure. Every Pokémon keeps its exact official body shape, colors and markings and keeps facing the camera or in clean profile; nobody turns around or twists its head backward. Expressions are cute, friendly and natural with soft smiling eyes unless a shot says otherwise, never angry-looking or creepy. No humans, no human hands, no trainers, no text, no letters, no logos, no UI elements on screen. The white background of the reference pictures is not used.
+[Shot 1] Medium close-up of <Subject 1> hopping playfully through a pastel flower field, chasing a few small white butterflies, ears bouncing, tail wagging, camera at its eye level drifting with it, soft afternoon light and floating petals. The motion is gentle and continuous so the clip can loop as an idle background; the final frame returns close to the opening composition.
+
+overall_soundscape:
+Gentle breeze, soft hops, birdsong, a tiny happy Eevee call. No human voices.
+
+non_diegetic_music:
+No music.

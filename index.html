@@ -5,136 +5,241 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#07060f">
 <title>P 寶可夢 雷光RUSH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#07060f;--panel:#141126;--line:#2c2650;--txt:#f3f0ff;--dim:#9a93c4;--gold:#ffd23f;--red:#ff4a5a;--blue:#4aa8ff}
+:root{--bg:#07060f;--panel:#110e22;--panel2:#181433;--line:#2c2650;--txt:#f3f0ff;--dim:#9a93c4;--gold:#ffd23f;--gold2:#ffb000;--red:#ff4a5a;--blue:#4aa8ff;--pos:#7dff9a;--neg:#ff7a86;--seg:"Orbitron","Arial Black",system-ui,sans-serif}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;overscroll-behavior:none;touch-action:manipulation;user-select:none;-webkit-user-select:none}
-#app{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
-header{flex:none;width:100%;max-width:760px;height:48px;display:flex;align-items:center;gap:8px;padding:0 10px}
-header .logo{height:38px;width:auto;mix-blend-mode:screen}
-.chip{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px 10px;font-size:13px;line-height:1.15;white-space:nowrap}
-.chip b{display:block;font-size:16px;color:var(--gold);font-variant-numeric:tabular-nums}
-#mode b{color:var(--blue)}
-#mode.rush b{color:var(--red)}
-.sp{flex:1}
-.ib{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--txt);font-size:18px;display:grid;place-items:center;cursor:pointer;padding:0}
-.ib:active{transform:scale(.94)}
-#stage{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;position:relative}
-canvas#board{display:block;border-radius:18px;box-shadow:0 0 0 2px #2a2448,0 10px 40px #000a}
-#controls{flex:none;width:100%;max-width:760px;height:84px;display:flex;align-items:center;gap:10px;padding:6px 12px}
-#powerWrap{flex:1;display:flex;flex-direction:column;gap:2px}
-#powerWrap .lab{display:flex;justify-content:space-between;font-size:12px;color:var(--dim)}
-#powerWrap .lab span.on{color:var(--gold);font-weight:700}
-#powerWrap .lab i{font-style:normal}
-input[type=range]{width:100%;height:34px;-webkit-appearance:none;appearance:none;background:transparent}
-input[type=range]::-webkit-slider-runnable-track{height:12px;border-radius:6px;background:linear-gradient(90deg,#3a7bff,#9c5cff 55%,#ff4a5a)}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;margin-top:-9px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,#c9c9d9 60%,#7d7d92);border:2px solid #fff}
-input[type=range]::-moz-range-track{height:12px;border-radius:6px;background:linear-gradient(90deg,#3a7bff,#9c5cff 55%,#ff4a5a)}
-input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:#eee;border:2px solid #fff}
-#fire{width:84px;height:62px;border-radius:16px;border:2px solid #3b3466;background:linear-gradient(#272046,#17132c);color:var(--txt);font-size:16px;font-weight:800;cursor:pointer;line-height:1.1}
-#fire.on{border-color:var(--gold);background:linear-gradient(#5a4300,#2b2000);color:var(--gold);box-shadow:0 0 18px #ffd23f66}
-#push{width:66px;height:66px;border:none;border-radius:50%;background:url(assets/ui/btn_push.webp) center/120% no-repeat #000;cursor:pointer;filter:grayscale(.85) brightness(.55);transition:filter .2s}
-#push.live{filter:none;animation:pulse .5s infinite alternate}
-@keyframes pulse{to{transform:scale(1.1)}}
-#drawer{position:fixed;top:0;right:0;bottom:0;width:min(360px,88vw);background:#110e22f2;backdrop-filter:blur(8px);border-left:1px solid var(--line);transform:translateX(105%);transition:transform .25s;z-index:20;display:flex;flex-direction:column}
-#drawer.open{transform:none}
-#drawer .hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);font-weight:700}
-#drawer .bd{flex:1;overflow:auto;padding:12px 14px;font-size:14px;line-height:1.5}
-#drawer h3{margin:14px 0 6px;font-size:14px;color:var(--gold)}
-#drawer table{width:100%;border-collapse:collapse;font-size:13px}
-#drawer td,#drawer th{border-bottom:1px solid #251f44;padding:4px 2px;text-align:left}
-#drawer td:last-child,#drawer th:last-child{text-align:right}
-#drawer .row{display:flex;align-items:center;gap:8px;margin:6px 0}
-#drawer .row label{width:72px;color:var(--dim)}
-#drawer .row input{flex:1;height:26px}
-.btn{border:1px solid var(--line);background:var(--panel);color:var(--txt);border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer;margin:4px 4px 4px 0}
+html,body{margin:0;height:100%;overflow:hidden;color:var(--txt);font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;overscroll-behavior:none;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+body{background:radial-gradient(1200px 700px at 50% -10%,#2a1d5c 0%,transparent 60%),radial-gradient(900px 600px at 50% 120%,#3a2a00 0%,transparent 55%),var(--bg)}
+button{font:inherit;color:inherit}
+#app{position:fixed;inset:0;display:grid;grid-template-columns:1fr;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+@media (min-width:1180px){#app{grid-template-columns:310px minmax(0,1fr) 310px}}
+
+/* ---------- side panels ---------- */
+.panel{background:linear-gradient(#120f26f2,#0b0918f2);border-right:1px solid var(--line);overflow:auto;padding:14px 14px 28px;font-size:13.5px;line-height:1.5;scrollbar-width:thin;scrollbar-color:#3a3366 transparent}
+#right{border-right:0;border-left:1px solid var(--line)}
+.panel h2{display:flex;align-items:center;justify-content:space-between;margin:2px 0 10px;font-size:15px;letter-spacing:1px;color:var(--gold)}
+.panel h3{margin:18px 0 8px;font-size:13px;color:var(--gold);letter-spacing:1px;display:flex;justify-content:space-between;align-items:baseline}
+.panel h3 small{color:var(--dim);font-weight:400;letter-spacing:0}
+.sheetClose{display:none;width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);cursor:pointer}
+@media (max-width:1179px){
+  .panel{position:fixed;top:0;bottom:0;width:min(380px,92vw);z-index:20;transition:transform .25s;padding-top:calc(14px + env(safe-area-inset-top))}
+  #left{left:0;transform:translateX(-105%);border-right:1px solid var(--line)}
+  #right{right:0;transform:translateX(105%)}
+  #left.open,#right.open{transform:none}
+  .sheetClose{display:grid;place-items:center}
+}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tile{background:#05040c;border:1px solid #2a2450;border-radius:10px;padding:6px 4px 5px;text-align:center}
+.tile small{display:block;font-size:11px;color:var(--dim)}
+.tile b{display:block;font:900 22px/1.1 var(--seg);color:var(--gold);text-shadow:0 0 10px #ffb00066}
+table{width:100%;border-collapse:collapse}
+td,th{padding:4px 2px;border-bottom:1px solid #221d40;text-align:left;font-weight:400;vertical-align:middle}
+td:last-child,th:last-child{text-align:right;font-variant-numeric:tabular-nums}
+th{color:var(--dim);font-size:12px}
+td small{color:var(--dim);font-size:11px}
+.pos{color:var(--pos)}.neg{color:var(--neg)}
+.dim{color:var(--dim)}
+#slump{width:100%;height:150px;display:block;background:#05040c;border:1px solid #2a2450;border-radius:10px}
+#hist td{font-size:12.5px}
+#hist img{width:20px;height:20px;vertical-align:-5px;margin-right:2px}
+#hist i{font-style:normal;color:var(--red);font-weight:800;margin-left:4px;font-size:11px}
+#histWrap{max-height:220px;overflow:auto}
+#trust td:nth-child(2){color:var(--dim);text-align:right}
+#trust td:nth-child(3){text-align:right}
+#ach{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#ach li{background:#0a0816;border:1px solid #221d40;border-radius:10px;padding:6px 8px;display:grid;grid-template-columns:auto 1fr;column-gap:6px;opacity:.55}
+#ach li.got{opacity:1;border-color:#6b5310;background:linear-gradient(#2a2000,#140f00)}
+#ach li span{grid-row:span 2;font-size:16px}
+#ach li b{font-size:12.5px}
+#ach li small{font-size:11px;color:var(--dim);line-height:1.3}
+.row{display:flex;align-items:center;gap:10px;margin:8px 0}
+.row label{width:72px;color:var(--dim)}
+.row input[type=range]{flex:1}
+.row.check label{width:auto;flex:1;color:var(--txt)}
+.row.check input{width:20px;height:20px;accent-color:var(--gold)}
+.howto p{margin:0 0 8px;color:#cfc9ef}
+.howto b{color:var(--gold)}
+.keys td{font-size:12.5px}
+kbd{display:inline-block;min-width:22px;padding:1px 6px;border-radius:6px;background:#221d40;border:1px solid #3a3366;font:12px system-ui;text-align:center}
+.btn{border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer;margin:4px 4px 4px 0}
 .btn.warn{border-color:#5a2230;color:#ff8a96}
-#drawer table.holes td,#drawer table.holes th{vertical-align:top;text-align:left}
-#drawer table.holes td:first-child{width:38%;padding-right:6px}
-#drawer table.holes small{color:var(--dim)}
-#hist{font-size:13px;color:var(--dim);max-height:160px;overflow:auto}
+.note{color:var(--dim);font-size:12px;margin:14px 0 0}
+
+/* ---------- centre column ---------- */
+#center{display:flex;flex-direction:column;align-items:center;min-width:0;min-height:0;height:100%}
+#topbar{flex:none;width:100%;max-width:820px;height:58px;display:flex;align-items:center;gap:8px;padding:6px 10px}
+#topbar .logo{height:42px;width:auto;mix-blend-mode:screen;flex:none}
+#counter{flex:1;display:flex;justify-content:center;gap:4px;min-width:0}
+.seg{background:#030208;border:1px solid #2e2858;border-radius:8px;padding:2px 8px 3px;text-align:center;min-width:58px;box-shadow:inset 0 0 12px #000}
+.seg small{display:block;font-size:10px;color:var(--dim);line-height:1.2}
+.seg b{display:block;font:900 19px/1.1 var(--seg);color:#ff3a4c;text-shadow:0 0 8px #ff2a3c99;font-variant-numeric:tabular-nums}
+.seg.g b{color:var(--gold);text-shadow:0 0 8px #ffb00099}
+.ib{width:40px;height:40px;flex:none;border-radius:12px;border:1px solid var(--line);background:var(--panel);font-size:18px;display:grid;place-items:center;cursor:pointer;padding:0}
+.ib:active{transform:scale(.94)}
+@media (min-width:1180px){#btnStats,#btnMenu{display:none}}
+#cabinet{flex:1;min-height:0;width:100%;max-width:820px;display:flex;align-items:center;justify-content:center;padding:0 10px}
+#frame{flex:none;position:relative;border-radius:30px;padding:9px;background:linear-gradient(135deg,#fff2b0,#c9962a 22%,#5a3d0a 45%,#fbe08a 62%,#8a5d12 80%,#ffe9a0);box-shadow:0 0 0 2px #000,0 0 40px #ffb00033,0 18px 50px #000c}
+#frame::before{content:"";position:absolute;inset:4px;border-radius:26px;background:repeating-linear-gradient(90deg,#ffd23f 0 6px,transparent 6px 16px);opacity:.0;pointer-events:none}
+#frame.rush{background:linear-gradient(135deg,#ffd0d6,#ff2a3c 22%,#5a0a14 45%,#ff8a96 62%,#8a1222 80%,#ffd0d6);box-shadow:0 0 0 2px #000,0 0 50px #ff2a3c55,0 18px 50px #000c}
+#stage{position:absolute;inset:9px;border-radius:22px;background:#05040c;overflow:hidden}
+canvas#board{display:block}
+#deck{flex:none;width:100%;max-width:820px;display:flex;align-items:center;gap:10px;padding:8px 12px 10px}
+.tray{flex:none;min-width:150px;height:66px;border-radius:18px;padding:6px 14px;background:linear-gradient(#22203a,#0d0c18);border:1px solid #3a3366;box-shadow:inset 0 -10px 18px #000a;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden}
+.tray::after{content:"";position:absolute;right:-6px;bottom:-18px;width:60px;height:30px;background:radial-gradient(circle at 10px 10px,#fff 1px,#c9cbe0 3px,#5d6176 7px,transparent 8px) 0 0/15px 13px;opacity:.55;pointer-events:none}
+.tray small{font-size:11px;color:var(--dim)}
+.tray b{font:900 24px/1.1 var(--seg);color:var(--gold);font-variant-numeric:tabular-nums}
+.tray em{font-style:normal;font-size:12px;font-variant-numeric:tabular-nums}
+#mode{font-size:11px;color:var(--dim)}
+#mode b{font:inherit;color:var(--blue);font-weight:800}
+#mode.rush b{color:var(--red)}
+.sides{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:0}
+.side{height:66px;border-radius:16px;border:2px solid #2e2858;background:linear-gradient(#1c1838,#100d22);cursor:pointer;line-height:1.15;padding:4px}
+.side b{display:block;font-size:17px}
+.side small{color:var(--dim);font-size:11px}
+.side.on{border-color:var(--blue);background:linear-gradient(#123a6a,#0a1d38);box-shadow:0 0 16px #4aa8ff55}
+#sideR.on{border-color:var(--red);background:linear-gradient(#6a1222,#380a12);box-shadow:0 0 16px #ff4a5a55}
+.side.want{animation:want .5s infinite alternate}
+@keyframes want{to{border-color:#fff;box-shadow:0 0 22px #fff8}}
+#fire{flex:none;width:86px;height:86px;margin:-12px 0;border-radius:50%;border:3px solid #3b3466;background:radial-gradient(circle at 50% 35%,#3a3366,#141127 70%);cursor:pointer;line-height:1.1;box-shadow:0 6px 18px #000a,inset 0 2px 0 #ffffff22}
+#fire b{display:block;font-size:17px}
+#fire small{font-size:11px;color:var(--dim)}
+#fire.on{border-color:var(--gold);background:radial-gradient(circle at 50% 35%,#7a5a00,#2b2000 70%);color:var(--gold);box-shadow:0 0 22px #ffd23f66}
+#fire.on small{color:#e9cf7a}
+#push{flex:none;width:70px;height:70px;border:none;border-radius:50%;background:url(assets/ui/btn_push.webp) center/120% no-repeat #000;cursor:pointer;filter:grayscale(.85) brightness(.55);transition:filter .2s}
+#push.live{filter:none;animation:pulse .4s infinite alternate}
+@keyframes pulse{to{transform:scale(1.12)}}
+#lend{flex:none;width:58px;height:58px;border-radius:14px;border:1px solid #3a3366;background:linear-gradient(#2a2148,#151129);cursor:pointer;font-size:12px;line-height:1.15;padding:0}
+#lend b{display:block;font-size:15px;color:var(--gold)}
+#lend.hot{animation:want .5s infinite alternate;border-color:var(--gold)}
+@media (max-width:640px){
+  #topbar{height:52px;gap:6px;padding:4px 8px}
+  #topbar .logo{height:32px}
+  .seg{min-width:0;flex:1;padding:2px 4px}
+  .seg b{font-size:15px}
+  .ib{width:36px;height:36px;font-size:16px}
+  #cabinet{padding:0 6px}
+  #frame{border-radius:22px;padding:6px}
+  #stage{inset:6px;border-radius:17px}
+  #deck{display:grid;grid-template-columns:1fr auto auto;grid-template-areas:"tray lend fire" "sides sides push";gap:8px;padding:8px 10px 10px}
+  .tray{grid-area:tray;min-width:0;height:56px}
+  .tray b{font-size:20px}
+  .sides{grid-area:sides}
+  .side{height:54px}
+  #lend{grid-area:lend;height:56px}
+  #fire{grid-area:fire;width:66px;height:56px;margin:0;border-radius:16px}
+  #fire b{font-size:14px}
+  #fire small{font-size:10px}
+  #push{grid-area:push;width:54px;height:54px}
+}
+@media (max-width:380px){#counter .seg:nth-child(3){display:none}}
+
 #scrim{position:fixed;inset:0;background:#0008;z-index:19;display:none}
 #scrim.on{display:block}
 .overlay{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(circle at 50% 40%,#231a4a,#07060fee 70%);text-align:center;padding:24px}
 .overlay img{width:min(560px,90vw);mix-blend-mode:screen}
-.overlay p{margin:0;color:var(--dim);font-size:14px;max-width:420px;line-height:1.6}
+.overlay p{margin:0;color:var(--dim);font-size:14px;max-width:440px;line-height:1.6}
 .overlay .go{font-size:20px;font-weight:800;padding:14px 34px;border-radius:16px;border:2px solid var(--gold);background:#2b2000;color:var(--gold);cursor:pointer}
 .hide{display:none!important}
 #pauseOv{background:#07060fcc}
 #pauseOv h2{margin:0;font-size:32px;letter-spacing:6px}
 #vids{position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none;overflow:hidden}
-@media (max-width:520px){#powerWrap .lab i.long{display:none}}
-@media (max-width:420px){header .logo{height:30px}.chip{padding:3px 7px;font-size:11px}.chip b{font-size:14px}.ib{width:36px;height:36px}#fire{width:72px}#push{width:58px;height:58px}}
+#toasts{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:40;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+.toast{background:linear-gradient(#3a2c00,#1c1500);border:1px solid var(--gold);color:var(--gold);padding:8px 16px;border-radius:12px;font-weight:800;font-size:14px;box-shadow:0 6px 20px #000a;transition:opacity .5s,transform .5s}
+.toast.out{opacity:0;transform:translateY(-10px)}
 </style>
 </head>
 <body>
 <div id="app">
-  <header>
-    <img class="logo" src="assets/ui/logo.webp" alt="雷光RUSH">
-    <div class="chip">持ち玉<b id="balls">1000</b></div>
-    <div class="chip" id="mode">模式<b id="modeTxt">通常</b></div>
-    <div class="sp"></div>
-    <button class="ib" id="btnSound" title="聲音">🔊</button>
-    <button class="ib" id="btnPause" title="暫停">⏸</button>
-    <button class="ib" id="btnMenu" title="選單">☰</button>
-  </header>
-  <div id="stage"><canvas id="board"></canvas></div>
-  <div id="controls">
-    <div id="powerWrap">
-      <div class="lab"><span id="labL">◀ 左打ち<i class="long">（中央入賞口）</i></span><span id="labR">右打ち<i class="long">（電チュー・大獎口）</i> ▶</span></div>
-      <input type="range" id="power" min="0" max="100" value="30">
+  <div id="scrim"></div>
+  <aside id="left" class="panel">
+    <h2>遊戲資料 <button class="sheetClose" aria-label="關閉">✕</button></h2>
+    <div class="tiles">
+      <div class="tile"><small>大当り</small><b id="tHits">0</b></div>
+      <div class="tile"><small>初当り</small><b id="tFirst">0</b></div>
+      <div class="tile"><small>總回轉</small><b id="tSpins">0</b></div>
+      <div class="tile"><small>最高連荘</small><b id="tChain">0</b></div>
     </div>
-    <button id="fire">發射<br><small>點擊開始</small></button>
-    <button id="push" title="PUSH"></button>
-  </div>
+    <h3>收支與機率</h3>
+    <table id="stats"></table>
+    <h3>鋼珠增減圖 <small>收支，每轉一點，黃線＝大当り</small></h3>
+    <canvas id="slump"></canvas>
+    <h3>大当り履歴 <small>ハマリ／連・圖柄・R・出玉</small></h3>
+    <div id="histWrap"><table id="hist"></table></div>
+  </aside>
+
+  <main id="center">
+    <div id="topbar">
+      <button class="ib" id="btnStats" title="遊戲資料">📊</button>
+      <img class="logo" src="assets/ui/logo.webp" alt="雷光RUSH">
+      <div id="counter">
+        <div class="seg"><small>大当り</small><b id="cHits">0</b></div>
+        <div class="seg"><small>RUSH</small><b id="cRush">0</b></div>
+        <div class="seg g"><small>總回轉</small><b id="cSpins">0</b></div>
+        <div class="seg g"><small id="cNowL">現在</small><b id="cNow">0</b></div>
+      </div>
+      <button class="ib" id="btnSound" title="聲音">🔊</button>
+      <button class="ib" id="btnPause" title="暫停">⏸</button>
+      <button class="ib" id="btnMenu" title="說明與設定">☰</button>
+    </div>
+    <div id="cabinet"><div id="frame"><div id="stage"><canvas id="board"></canvas></div></div></div>
+    <div id="deck">
+      <div class="tray">
+        <small>持ち玉</small><b id="balls">2,000</b>
+        <em>收支 <span id="diff" class="pos">+0</span>　<span id="mode">模式 <b id="modeTxt">通常</b></span></em>
+      </div>
+      <button id="lend" title="借玉（B）"><b>借玉</b>500</button>
+      <div class="sides">
+        <button class="side on" id="sideL"><b>◀ 左打ち</b><small>通常時・進 START</small></button>
+        <button class="side" id="sideR"><b>右打ち ▶</b><small>大当り・RUSH 中</small></button>
+      </div>
+      <button id="fire"><b>發射</b><small>點擊開始</small></button>
+      <button id="push" title="PUSH（Enter）"></button>
+    </div>
+  </main>
+
+  <aside id="right" class="panel">
+    <h2>說明與設定 <button class="sheetClose" aria-label="關閉">✕</button></h2>
+    <h3>演出信賴度 <small>理論＝機率表，你的＝實際遇到</small></h3>
+    <table id="trust"></table>
+    <h3>成就 <small id="achN">0 / 0</small></h3>
+    <ul id="ach"></ul>
+    <h3>怎麼玩</h3>
+    <div class="howto">
+      <p>按<b>發射</b>開始打珠。平常用<b>左打ち</b>，讓珠子進液晶下方的 START，每進一顆抽一次大獎（1/99），轉輪在轉時最多存 4 個保留。</p>
+      <p>中<b>大当り</b>後改<b>右打ち</b>，把珠子打進右下打開的大獎口：每顆 +15，<b>10R 約 1,500 顆</b>、<b>3R 約 450 顆</b>。（設定裡的「自動切換」開著時會自己換邊。）</p>
+      <p>停在<b>奇數</b>＝10R＋雷光 RUSH，<b>偶數</b>＝3R（3R 最後有機會<b>進化昇格</b>成 RUSH）。RUSH 是 20 轉內 1/12 的高機率，約 82% 會再中；RUSH 中右打ち讓珠子過 GATE、打開電チュー。</p>
+      <p>聽牌時那隻寶可夢會出場。SP／SPSP 高潮出現 <b>PUSH</b> 時按下去揭曉。</p>
+      <p>珠子打完就按<b>借玉</b>，借的珠會算進「投資」。</p>
+    </div>
+    <table class="keys">
+      <tr><td><kbd>Space</kbd></td><td>發射／停止</td></tr>
+      <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>左打ち／右打ち</td></tr>
+      <tr><td><kbd>Enter</kbd> <kbd>Z</kbd></td><td>PUSH、跳過長影片</td></tr>
+      <tr><td><kbd>B</kbd></td><td>借玉 500</td></tr>
+      <tr><td><kbd>P</kbd></td><td>暫停</td></tr>
+    </table>
+    <h3>洞口</h3>
+    <table class="keys">
+      <tr><td><b>START</b><br><small>液晶正下方金框</small></td><td>+3 顆，抽一次大獎</td></tr>
+      <tr><td><b>GATE</b><br><small>右側通道上方</small></td><td>RUSH 中通過就打開電チュー</td></tr>
+      <tr><td><b>電チュー</b><br><small>右側紅翅膀</small></td><td>+1 顆，也抽大獎</td></tr>
+      <tr><td><b>ATTACKER</b><br><small>右下金色斜板</small></td><td>大当り時打開，每顆 +15</td></tr>
+      <tr><td><b>紫框小洞</b></td><td>+5 顆，不抽獎</td></tr>
+    </table>
+    <h3>設定</h3>
+    <div class="row"><label>影片音量</label><input type="range" id="volVid" min="0" max="100" value="80"></div>
+    <div class="row"><label>音效音量</label><input type="range" id="volSfx" min="0" max="100" value="60"></div>
+    <div class="row check"><label for="optAuto">大当り／RUSH 自動切換左右打ち</label><input type="checkbox" id="optAuto" checked></div>
+    <div class="row check"><label for="optSkip">長影片播 3 秒後可點液晶跳過</label><input type="checkbox" id="optSkip" checked></div>
+    <button class="btn warn" id="btnReset">全部重來</button>
+    <p class="note">仿近代日本數位柏青哥的網頁遊戲。演出影片用 MiniMax H3 生成。非官方粉絲作品，寶可夢相關權利屬於原權利人。本遊戲沒有任何真實金錢輸贏或兌換。</p>
+  </aside>
 </div>
 
-<div id="scrim"></div>
-<aside id="drawer">
-  <div class="hd"><span>選單</span><button class="ib" id="btnClose">✕</button></div>
-  <div class="bd">
-    <h3>音量</h3>
-    <div class="row"><label>影片</label><input type="range" id="volVid" min="0" max="100" value="80"></div>
-    <div class="row"><label>音效</label><input type="range" id="volSfx" min="0" max="100" value="60"></div>
-    <div class="row"><label>演出</label><select id="optSkip" class="btn" style="flex:1"><option value="0">完整播放</option><option value="1">長影片可點液晶跳過</option></select></div>
-    <h3>統計</h3>
-    <table id="stats"></table>
-    <h3>大當り履歴</h3>
-    <div id="hist">還沒有大當り</div>
-    <h3>演出信賴度</h3>
-    <table>
-      <tr><th>演出</th><th>信賴度</th></tr>
-      <tr><td>ノーマルリーチ</td><td>約 1%</td></tr>
-      <tr><td>SPリーチ（耿鬼）</td><td>約 12%</td></tr>
-      <tr><td>SPSPリーチ（超夢）</td><td>約 48%</td></tr>
-      <tr><td>全回轉（夢幻）</td><td>必中</td></tr>
-      <tr><td>夢幻泡泡（プレミア）</td><td>必中</td></tr>
-      <tr><td>保留：藍／綠／紅／金／虹</td><td>低／中／高／超高／必中</td></tr>
-      <tr><td>群予告（波波）</td><td>約 30%</td></tr>
-      <tr><td>紅色カットイン（噴火龍）</td><td>約 60%</td></tr>
-      <tr><td>擬似連 ×3</td><td>約 70%</td></tr>
-      <tr><td>ステップアップ 5 階</td><td>約 80%</td></tr>
-    </table>
-    <h3>玩法</h3>
-    <p style="color:var(--dim);font-size:13px;margin:0">按「發射」開始打珠，拉桿調力道。通常時用<b>左打ち</b>讓珠子進液晶下方的中央入賞口（ヘソ）抽獎；大當り和 RUSH 中改<b>右打ち</b>，珠子會進右側的電チュー和大獎口。SP／SPSP 高潮時按 PUSH 揭曉。鍵盤：空白鍵＝發射、←→＝力道、Enter＝PUSH、P＝暫停。</p>
-    <h3>洞口說明</h3>
-    <p style="color:var(--dim);font-size:13px;margin:0 0 6px">左打ち＝拉桿拉小，珠子往左邊掉；右打ち＝拉桿拉大，珠子越過液晶上方屋頂往右邊掉。</p>
-    <table class="holes">
-      <tr><th>洞口</th><th>進去會怎樣</th></tr>
-      <tr><td><b>START</b><br><small>液晶正下方金框（ヘソ）</small></td><td>+3 顆，<b>抽一次大獎</b>。轉輪在轉時先存成「保留」，最多 4 個（液晶下方的彩色球）。<br><small>通常時，左打ち</small></td></tr>
-      <tr><td><b>GATE</b><br><small>右側通道上方弧形</small></td><td>不給珠，讓電チュー打開。<br><small>右打ち一定會經過</small></td></tr>
-      <tr><td><b>電チュー</b><br><small>右側通道中段紅翅膀</small></td><td>+1 顆，也會抽大獎。平常幾乎不開，<b>RUSH 中</b>每次過 GATE 開約 2 秒。<br><small>RUSH 中，右打ち</small></td></tr>
-      <tr><td><b>ATTACKER</b><br><small>右下金色斜板（大獎口）</small></td><td>只在<b>大当り</b>時開。每顆 +15，每回合 10 顆或 25 秒，10R 約 1,500 顆。<br><small>大当り中，右打ち</small></td></tr>
-      <tr><td><b>紫框小洞</b><br><small>左下、中下（一般入賞口）</small></td><td>+5 顆，不抽獎。</td></tr>
-      <tr><td><b>OUT</b><br><small>最下面黑色橢圓</small></td><td>沒進任何洞的珠子從這裡回收。</td></tr>
-    </table>
-    <p style="color:var(--dim);font-size:13px;margin:6px 0 0">簡單說：平常左打ち進 START 抽獎；中大獎或 RUSH 時改右打ち，進大獎口和電チュー拿鋼珠。選錯邊時棋盤中間會閃字提醒換邊。</p>
-    <h3>其他</h3>
-    <button class="btn" id="btnRefill">補充 1000 顆</button>
-    <button class="btn warn" id="btnReset">全部重來</button>
-  </div>
-</aside>
-
+<div id="toasts"></div>
 <div class="overlay" id="startOv">
   <img src="assets/ui/logo.webp" alt="雷光RUSH">
   <p>仿近代日本數位柏青哥的網頁遊戲。演出影片用 MiniMax H3 生成。<br>建議開聲音遊玩。</p>
@@ -143,6 +248,6 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 </div>
 <div class="overlay hide" id="pauseOv"><h2>暫停中</h2><button class="go" id="btnResume">繼續</button></div>
 <div id="vids"></div>
-<script src="game.js?v=4"></script>
+<script src="game.js?v=5"></script>
 </body>
 </html>
