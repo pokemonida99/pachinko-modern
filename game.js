@@ -8,7 +8,7 @@ const G = 1500;         // gravity px/s^2
 const FIRE_INTERVAL = 0.6; // s (100 balls/min)
 // POW_NOISE spreads each shot's speed so the START entry rate is flat (~7%) instead of jumping with tiny power changes
 let POW_MIN = 80, POW_RANGE = 700, POW_NOISE = 40, ROAD_GAP = 21, ROAD_END = 64, HESO_W = 14, FUNNEL = 70;
-const POWER_L = 0.25, POWER_R = 0.6;   // 左打ち／右打ち are fixed powers
+const POWER_L = 0.25, POWER_R = 0.6;   // 左打／右打 are fixed powers
 const SAVE_KEY = 'pk_modern_v2', START_BALLS = 2000, LEND = 500;
 const P_NORMAL = 1 / 99, P_RUSH = 1 / 12, ST_SPINS = 20;
 
@@ -38,7 +38,7 @@ const SP_LINES = {
   birds: ['47_spsp_birds_reach', '48_spsp_birds_win', '49_spsp_birds_lose'],
 };
 const LINE_W = { sp: { hit: { meowth: 15, gengar: 35, sky: 50 }, miss: { meowth: 50, gengar: 35, sky: 15 } }, spsp: { hit: { mewtwo: 45, birds: 55 }, miss: { mewtwo: 60, birds: 40 } } };
-const UI = ['board_bg','btn_push','logo','txt_chance','txt_gekiatsu','txt_next','txt_ooatari','txt_rush','txt_reach','txt_zenkaiten','hold_white','hold_blue','hold_green','hold_red','hold_gold','hold_rainbow'];
+const UI = ['board_bg','btn_push','logo','hold_white','hold_blue','hold_green','hold_red','hold_gold','hold_rainbow'];
 const HOLD_GLOW = {white:'#ffffff',blue:'#3a8bff',green:'#2fe06a',red:'#ff3048',gold:'#ffc61a',rainbow:'#ff6bff'};
 
 // ---------- DOM ----------
@@ -53,6 +53,37 @@ let loadCount = 0;
 const totalLoad = UI.length + 9;
 function onLoaded() { loadCount++; $('loadTxt').textContent = loadCount >= totalLoad ? '準備完成' : `載入中… ${loadCount}/${totalLoad}`; }
 for (const n of UI) { const i = new Image(); i.onload = onLoaded; i.onerror = onLoaded; i.src = `assets/ui/${n}.webp`; IMG[n] = i; }
+// LCD text cards are drawn in code (the old image cards were Japanese): transparent, glow + dark outline so they read on any clip.
+const CARD_STYLE = {
+  txt_reach: ['聽牌！', ['#ffffff', '#ffb0b8', '#ff2a3c'], '#ff2a3c'],
+  txt_chance: ['機會！', ['#ffffff', '#9fd4ff', '#2a7bff'], '#2a7bff'],
+  txt_gekiatsu: ['激熱！', ['#fff7b0', '#ff8a00', '#ff1a2c'], '#ff3a00'],
+  txt_next: ['繼續！', ['#ffffff', '#9ffcff', '#00c8ff'], '#00c8ff'],
+  txt_ooatari: ['大獎！', 'rainbow', '#ffd23f'],
+  txt_zenkaiten: ['全回轉', 'rainbow', '#ff6bff'],
+  txt_rush: ['雷光RUSH 突入', ['#fffbe0', '#ffd23f', '#ff5a1a'], '#ffb000'],
+};
+function buildCards() {
+  for (const k in CARD_STYLE) {
+    const [text, fill, glow] = CARD_STYLE[k];
+    const c = document.createElement('canvas'); c.width = 1400; c.height = 420;
+    const g = c.getContext('2d');
+    let fs = 270; const font = () => `900 ${fs}px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif`;
+    g.font = font(); while (g.measureText(text).width > 1280) { fs -= 8; g.font = font(); }
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+    const cx = 700, cy = 215;
+    g.shadowColor = glow; g.shadowBlur = 60; g.strokeStyle = glow; g.lineWidth = fs * 0.2; g.strokeText(text, cx, cy);
+    g.shadowBlur = 0; g.strokeStyle = '#140818'; g.lineWidth = fs * 0.12; g.strokeText(text, cx, cy);
+    g.strokeStyle = '#ffffff'; g.lineWidth = fs * 0.045; g.strokeText(text, cx, cy);
+    let gr;
+    if (fill === 'rainbow') { gr = g.createLinearGradient(100, 0, 1300, 0); ['#ff3a4c', '#ffb000', '#ffe14a', '#4cff7a', '#3ab0ff', '#b46bff', '#ff6bd6'].forEach((col, i, a) => gr.addColorStop(i / (a.length - 1), col)); }
+    else { gr = g.createLinearGradient(0, cy - fs / 2, 0, cy + fs / 2); fill.forEach((col, i, a) => gr.addColorStop(i / (a.length - 1), col)); }
+    g.fillStyle = gr; g.fillText(text, cx, cy);
+    IMG[k] = c;
+  }
+}
+buildCards();
+if (document.fonts) document.fonts.load('900 100px "Noto Sans TC"', '聽牌機會激熱繼續大獎全回轉雷光突入！').then(buildCards).catch(() => {});
 const SYM = [];
 for (let k = 1; k <= 9; k++) { const i = new Image(); i.onload = onLoaded; i.onerror = onLoaded; i.src = `assets/sym/s${k}.webp`; SYM[k] = i; }
 // Videos load on demand into a small pool of <video> elements. All pool elements are unlocked for sound in the
@@ -105,7 +136,7 @@ const st = {
   fg: null, bg: null, hold: null, next: null, pushWait: null, rushSum: null, fullT: -9, skipAt: 0, rushTotal: 0, step: null, banner: null, gijiCount: 0,
   waiters: [], force: null, rightHint: 0,
 };
-function mkReel() { return { spin: false, pos: Math.random() * 9, speed: 0, num: 1 + (Math.random() * 9 | 0), bounce: 0, q: false, sync: false }; }
+function mkReel() { const num = 1 + (Math.random() * 9 | 0); return { spin: false, pos: num - 1, speed: 0, num, bounce: 0, q: false, sync: false, glide: null }; }
 
 // ---------- game clock & waits ----------
 function wait(ms) { return new Promise(r => st.waiters.push({ t: st.time + ms / 1000, r })); }
@@ -148,6 +179,7 @@ const SFX = {
   denchu() { tone(988, 0.07, 'square', 0.1); tone(1480, 0.1, 'square', 0.1, null, 0.06); },
   pay() { tone(2093, 0.05, 'square', 0.06); },
   stop() { tone(220, 0.06, 'square', 0.14, 110); noise(0.05, 0.08, 2000); },
+  tick() { tone(1500, 0.035, 'square', 0.07); },
   spin() { tone(660, 0.05, 'triangle', 0.06, 990); },
   reach() { tone(330, 0.5, 'sawtooth', 0.12, 990); tone(660, 0.6, 'square', 0.08, 1320, 0.15); },
   step(l) { const f = [523, 659, 784, 988, 1319][l - 1] || 523; tone(f, 0.18, 'square', 0.14); tone(f * 1.5, 0.22, 'triangle', 0.1, null, 0.05); },
@@ -233,7 +265,7 @@ function buildGeo() {
 
 // ---------- balls & physics ----------
 function launch() {
-  if (S.balls <= 0) { setFiring(false); banner('持ち玉不足 — 按「借玉」', 2200); $('lend').classList.add('hot'); return; }
+  if (S.balls <= 0) { setFiring(false); banner('持有鋼珠不足 — 按「借珠」', 2200); $('lend').classList.add('hot'); return; }
   S.balls--; if (!simMode) { S.stats.fired++; if (!st.rush && !st.inJackpot) S.stats.firedNormal++; } dirty = true;
   const a1 = Math.PI * 1.30, v0 = POW_MIN + POW_RANGE * st.power + (rnd() - 0.5) * POW_NOISE;
   st.balls.push({ x: geo.L + 9, y: H - 40, vx: 0, vy: 0, rail: 0, a1, v0, life: 0, onFloor: false });
@@ -387,14 +419,16 @@ function makeHold(src, rush = st.rush && st.stLeft > 0) {   // holds taken after
     const n = f?.num ?? (h.rounds === 10 ? odd[rnd() * 5 | 0] : even[rnd() * 4 | 0]);
     h.nums = [n, n, n];
   } else if (h.reach !== 'none') {
-    const n = f?.num ?? r9(); let c = rnd() < 0.7 ? ((n % 9) + 1) : r9(); if (c === n) c = (n % 9) + 1;
+    // a missed 聽牌 stops one short (n-1) or slides one past (n+1); now and then somewhere else
+    const n = f?.num ?? r9(), x = rnd();
+    let c = x < 0.45 ? ((n + 7) % 9) + 1 : x < 0.9 ? (n % 9) + 1 : r9(); if (c === n) c = (n % 9) + 1;
     h.nums = [n, c, n];
   } else {
     const a = r9(); let b = r9(); if (b === a) b = (a % 9) + 1; h.nums = [a, r9(), b];
   }
   return h;
 }
-// 實測信賴度: count each effect (通常時 only) and how many of those were hits
+// 實測信賴度: count each effect (一般時 only) and how many of those were hits
 function tally(key, hit) { const e = S.stats.eff[key] || (S.stats.eff[key] = [0, 0]); e[0]++; if (hit) e[1]++; }
 
 // ---------- video helpers ----------
@@ -452,8 +486,33 @@ function doFlash(col = '#fff', strength = 1) { st.flash = strength; st.flashCol 
 function burst(n, x, y, cols) { for (let i = 0; i < n; i++) { const a = rnd() * 6.283, s = 150 + rnd() * 520; st.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 200, life: 1 + rnd() * 0.8, col: cols[i % cols.length], r: 2 + rnd() * 4 }); } }
 
 // ---------- reels ----------
-function startReels() { for (const r of st.reels) { r.spin = true; r.speed = 16 + rnd() * 2; r.q = false; r.sync = false; } SFX.spin(); }
-function stopReel(i, n) { const r = st.reels[i]; r.spin = false; r.num = n; r.bounce = 1; r.q = false; SFX.stop(); }
+// Reels are one continuous position: number N sits in the centre when pos ≡ N-1 (mod 9) and the numbers come
+// down in order (…N → N+1…). A stop never jumps: the reel eases into the target, slowing to a crawl at the end.
+function startReels() { for (const r of st.reels) { r.spin = true; r.speed = 16 + rnd() * 2; r.q = false; r.sync = false; r.glide = null; } SFX.spin(); }
+// quick stop: one ease-out. crawl (聽牌): brake hard for tA s down to a crawl speed v1, then slow linearly to 0 over tB s,
+// so the last numbers creep past one by one instead of the reel sitting still.
+function glideReel(i, n, dur = 0.45, minD = 2, crawl = 0) {
+  const r = st.reels[i]; r.q = false; r.sync = false;
+  if (!r.spin) { r.spin = true; r.speed = 0; }
+  const from = r.pos, v0 = Math.max(r.speed, 0.5), first = Math.ceil(from) + (((n - 1 - Math.ceil(from)) % 9) + 9) % 9;
+  const g = { from, n, t0: st.time, tick: Math.floor(from) };
+  if (crawl) {
+    const tA = Math.min(1, dur * 0.25); let tB = dur - tA;
+    const want = v0 * tA / 2 + crawl * (tA + tB) / 2;           // distance if v1 were exactly the crawl speed
+    let to = first; while (to - from < Math.max(want - 4.5, (v0 + crawl * 0.6) / 2 * tA + 1)) to += 9;   // nearest landing spot to that
+    const d = to - from;
+    let v1 = Math.min(crawl * 1.45, Math.max(crawl * 0.6, (d - v0 * tA / 2) / ((tA + tB) / 2)));
+    tB = Math.max(1, 2 * (d - (v0 + v1) / 2 * tA) / v1);        // the rest is absorbed by the crawl time
+    Object.assign(g, { d, v0, v1, tA, tB, dur: tA + tB });
+  } else {
+    let to = first; while (to - from < minD) to += 9;
+    const d = to - from;
+    Object.assign(g, { d, dur, p: Math.max(1.6, v0 * dur / d) });
+  }
+  r.glide = g;
+  return wait(g.dur * 1000 + 30);
+}
+function stopReel(i, n) { glideReel(i, n); }
 function slowReel(i, sp) { st.reels[i].speed = sp; }
 function reelsQ() { for (const r of st.reels) { r.spin = false; r.q = true; r.sync = false; r.bounce = 1; } SFX.stop(); }
 
@@ -504,7 +563,7 @@ async function runSpin(h) {
   if (h.reach === 'instant') { await wait(base); doFlash('#ffd23f', 0.6); reelsQ(); await wait(300); return finishSpin(h); }
   await wait(base);
   stopReel(0, h.nums[0]); await wait(st.rush ? 250 : 550);
-  stopReel(2, h.nums[2]);
+  await glideReel(2, h.nums[2]);
   if (h.reach !== 'none') {
     const n = h.nums[0];
     await wait(250);
@@ -514,10 +573,10 @@ async function runSpin(h) {
     else await wait(1300);
     if (h.reach === 'normal') {
       st.reelMode = 'big';
-      slowReel(1, 5); await wait(1400); slowReel(1, 2.2); await wait(1600);
-      if (h.hit) reelsQ();
+      // the middle reel slows to a crawl and creeps into: the hit, one short, or one past
+      await glideReel(1, h.hit ? n : h.nums[1], st.rush ? 3.5 : 5.5, 0, st.rush ? 3.2 : 2.4);
+      if (h.hit) st.landed = true;
       else {
-        stopReel(1, h.nums[1]);
         const lc = !st.rush && anyHave(LOSE_CLIPS(n));
         if (lc) { await wait(450); st.reelMode = 'mini'; await playClip(lc, { keepBgPaused: true, hold: true }); }
         await wait(300); st.hold = null; resumeBg();
@@ -544,12 +603,13 @@ async function runSpin(h) {
         }
       }
       st.reelMode = 'big';
-      if (h.hit) reelsQ(); else stopReel(1, h.nums[1]);
+      await glideReel(1, h.hit ? n : h.nums[1], 2.6, 0, 2.6);
+      if (h.hit) st.landed = true;
       if (!h.hit) { await wait(600); st.hold = null; resumeBg(); if (h.reach === 'spsp') bump('spspLose'); }
     }
   } else {
-    await wait(st.rush ? 200 : 450);
-    stopReel(1, h.nums[1]);
+    await wait(st.rush ? 100 : 250);
+    await glideReel(1, h.nums[1]);
   }
   await wait(250);
   return finishSpin(h);
@@ -600,19 +660,19 @@ async function zenkaiten(h) {
   unlock('zen');
 }
 
-// ---------- 大当り ----------
+// ---------- 大獎 ----------
 async function jackpot(h) {
   st.inJackpot = true; st.busy = true;
   const wasRush = st.rush, n = h.nums[0], s = S.stats;
   autoSide(true);
   // ？？？ → flash → reveal
-  for (const r of st.reels) r.q = true;
   st.reelMode = 'big';
-  SFX.tension();
   prefetch(WIN_CLIP(n));
-  await wait(1400);
+  if (st.landed) { await wait(350); }
+  else { for (const r of st.reels) r.q = true; SFX.tension(); await wait(1400); }
+  st.landed = false;
   doFlash('#fff'); st.shake = 0.7;
-  for (let i = 0; i < 3; i++) { st.reels[i].q = false; st.reels[i].num = h.nums[i]; st.reels[i].bounce = 1.4; }
+  for (let i = 0; i < 3; i++) { const r = st.reels[i]; r.q = false; r.glide = null; r.spin = false; r.num = h.nums[i]; r.pos = h.nums[i] - 1; r.bounce = 1.4; }
   await wait(120);
   card(IMG.txt_ooatari, 2200, { s: 0.95 }); SFX.fanfare(); st.ledMode = 'jackpot';
   burst(90, W / 2, geo.lcd.y0 + 150, ['#ffd23f', '#ff6bff', '#5ff', '#fff', '#ff4a5a']);
@@ -625,7 +685,7 @@ async function jackpot(h) {
   if (!wasRush && ham >= 300) unlock('hamari300');
   if (!wasRush && ham <= 10) unlock('quick');
   // tell 3R and RUSH apart with fixed text, in ball counts
-  banner(h.rounds === 10 ? (wasRush ? `${st.chain} 連！10R（約 1,500 玉）` : '10R＋RUSH 突入確定！') : (wasRush ? `${st.chain} 連！3R（約 450 玉）` : '3R（約 450 玉）'), 2200, h.rounds === 10 ? '#ffd23f' : '#9ad0ff');
+  banner(h.rounds === 10 ? (wasRush ? `${st.chain} 連！10 回合（約 1,500 顆）` : '10 回合＋RUSH 突入確定！') : (wasRush ? `${st.chain} 連！3 回合（約 450 顆）` : '3 回合（約 450 顆）'), 2200, h.rounds === 10 ? '#ffd23f' : '#9ad0ff');
   // the clip: a chain milestone in RUSH, otherwise the number's own Pokémon wins or gets caught
   let clip = null;
   if (wasRush) clip = st.chain === 2 ? '56_chain_ride' : st.chain === 5 ? '57_chain_mega' : st.chain >= 10 && st.chain % 5 === 0 ? '58_chain_hooh' : null;
@@ -680,7 +740,7 @@ async function jackpot(h) {
     setBg(null);
     await playClip('67_round_end');
     setBg('idle');
-    banner('回到通常模式', 1800);
+    banner('回到一般模式', 1800);
     autoSide(false);
   }
   st.inJackpot = false;
@@ -712,27 +772,27 @@ function pushSlump() {
 }
 function bump(k) { S.stats[k] = (S.stats[k] || 0) + 1; }
 const ACH = [
-  ['first', '初當り', '第一次大当り'],
+  ['first', '首次大獎', '第一次大獎'],
   ['rush', 'RUSH 突入', '第一次進入雷光 RUSH'],
-  ['chain5', '五連荘', 'RUSH 連續 5 次大当り', () => st.chain >= 5],
-  ['chain10', '十連荘', 'RUSH 連續 10 次大当り', () => st.chain >= 10],
-  ['chain20', '二十連荘', 'RUSH 連續 20 次大当り', () => st.chain >= 20],
-  ['rush10k', '萬發', '一次 RUSH 拿到 10,000 玉以上', () => (st.rushTotal || 0) >= 10000],
-  ['balls10k', '鋼珠山', '持ち玉達到 10,000 顆', () => S.balls >= 10000],
-  ['plus10k', '人生勝利組', '收支 +10,000 玉', () => S.balls - S.stats.invest >= 10000],
-  ['quick', '秒中', '10 轉以內中大当り'],
-  ['hamari300', 'ハマリ脫出', '300 轉以上沒中之後中大当り'],
-  ['deep', '深淵', '連續 500 轉沒中大当り', () => S.stats.hamari >= 500],
-  ['push', '親手揭曉', '自己按 PUSH，結果是大当り'],
+  ['chain5', '五連莊', 'RUSH 連續 5 次大獎', () => st.chain >= 5],
+  ['chain10', '十連莊', 'RUSH 連續 10 次大獎', () => st.chain >= 10],
+  ['chain20', '二十連莊', 'RUSH 連續 20 次大獎', () => st.chain >= 20],
+  ['rush10k', '萬發', '一次 RUSH 拿到 10,000 顆以上', () => (st.rushTotal || 0) >= 10000],
+  ['balls10k', '鋼珠山', '持有鋼珠達到 10,000 顆', () => S.balls >= 10000],
+  ['plus10k', '人生勝利組', '收支 +10,000 顆', () => S.balls - S.stats.invest >= 10000],
+  ['quick', '秒中', '10 轉以內中大獎'],
+  ['hamari300', '低潮脫出', '300 轉以上沒中之後中大獎'],
+  ['deep', '深淵', '連續 500 轉沒中大獎', () => S.stats.hamari >= 500],
+  ['push', '親手揭曉', '自己按揭曉鈕，結果是大獎'],
   ['revive', '復活', '看到寶可夢再站起來'],
-  ['upgrade', '進化昇格', '3R 最後進化成 RUSH'],
+  ['upgrade', '進化昇格', '3 回合最後進化成 RUSH'],
   ['zen', '全回轉', '看到夢幻全回轉'],
-  ['premium', '夢幻泡泡', '看到プレミア演出'],
+  ['premium', '夢幻泡泡', '看到稀有演出'],
   ['gold', '金保留', '看到金色保留'],
   ['rainbow', '虹保留', '看到彩虹保留'],
   ['allsym', '圖柄全收集', '9 隻圖柄寶可夢各中過一次', () => [1, 2, 3, 4, 5, 6, 7, 8, 9].every(k => S.stats.symHit[k])],
-  ['mewtwo10', '超夢又跑了', 'SPSP 超夢失敗 10 次', () => (S.stats.spspLose || 0) >= 10],
-  ['hits100', '常客', '累計 100 次大当り', () => S.stats.hits >= 100],
+  ['mewtwo10', '超夢又跑了', '超強聽牌超夢失敗 10 次', () => (S.stats.spspLose || 0) >= 10],
+  ['hits100', '常客', '累計 100 次大獎', () => S.stats.hits >= 100],
   ['spins10k', '萬轉', '累計轉 10,000 次', () => S.stats.spins >= 10000],
 ];
 function unlock(id) {
@@ -769,7 +829,22 @@ function update(dt) {
   // start next spin
   if (!st.busy && !st.inJackpot && st.holds.length) { const h0 = st.holds.shift(); runSpin(h0); }
   // reels
-  for (const r of st.reels) { if (r.spin) r.pos = (r.pos + r.speed * dt) % 9; if (r.bounce > 0) r.bounce = Math.max(0, r.bounce - dt * 4); }
+  for (const r of st.reels) {
+    const g = r.glide;
+    if (g) {
+      const t = st.time - g.t0, k = Math.min(1, t / g.dur);
+      if (g.tA !== undefined) {
+        if (t < g.tA) { r.pos = g.from + g.v0 * t + (g.v1 - g.v0) * t * t / (2 * g.tA); r.speed = g.v0 + (g.v1 - g.v0) * t / g.tA; }
+        else { const u = Math.min(g.tB, t - g.tA), xA = (g.v0 + g.v1) / 2 * g.tA; r.pos = g.from + Math.min(g.d, xA + g.v1 * u - g.v1 * u * u / (2 * g.tB)); r.speed = g.v1 * (1 - u / g.tB); }
+      } else {
+        r.pos = g.from + g.d * (1 - Math.pow(1 - k, g.p));
+        r.speed = g.d * g.p * Math.pow(1 - k, g.p - 1) / g.dur;
+      }
+      if (Math.floor(r.pos) !== g.tick) { g.tick = Math.floor(r.pos); if (r.speed < 7) SFX.tick(); }   // tick as each number crawls past
+      if (k >= 1) { r.glide = null; r.spin = false; r.num = g.n; r.pos = g.n - 1; r.speed = 0; r.bounce = 0.5; SFX.stop(); }
+    } else if (r.spin) r.pos = (r.pos + r.speed * dt) % 9;
+    if (r.bounce > 0) r.bounce = Math.max(0, r.bounce - dt * 4);
+  }
   if (st.reels.some(r => r.sync)) { const p = st.reels[0].pos; for (const r of st.reels) if (r.sync) r.pos = p; }
   st.reelMix += ((st.reelMode === 'mini' ? 0 : 1) - st.reelMix) * Math.min(1, dt * 8);
   // effects
@@ -794,7 +869,7 @@ function updateHud() {
   const diff = S.balls - s.invest; $('diff').textContent = signed(diff); $('diff').className = diff >= 0 ? 'pos' : 'neg';
   elMode.classList.toggle('rush', st.rush || st.inJackpot);
   $('frame').classList.toggle('rush', st.rush || st.inJackpot);
-  elModeTxt.textContent = st.inJackpot ? '大当り' : st.rush ? (st.stLeft > 0 ? `RUSH 殘${st.stLeft}` : '殘保留') : '通常';
+  elModeTxt.textContent = st.inJackpot ? '大獎' : st.rush ? (st.stLeft > 0 ? `RUSH 剩${st.stLeft}` : '殘保留') : '一般';
   $('cHits').textContent = s.hits; $('cRush').textContent = s.rush; $('cSpins').textContent = s.spins; $('cNow').textContent = st.rush ? st.chain + '連' : s.hamari;
   $('cNowL').textContent = st.rush ? 'RUSH' : '現在';
   $('sideL').classList.toggle('want', st.rightHint === -1); $('sideR').classList.toggle('want', st.rightHint === 1);
@@ -816,8 +891,8 @@ function render() {
   for (const p of st.particles) { ctx.globalAlpha = Math.min(1, p.life); ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill(); }
   ctx.globalAlpha = 1;
   if (st.flash > 0) { ctx.globalAlpha = Math.min(1, st.flash); ctx.fillStyle = st.flashCol; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
-  if (st.rightHint === 1 && (st.time * 2 | 0) % 2 === 0) drawHint('請右打ち ▶▶', '#ff4a5a');
-  if (st.rightHint === -1 && (st.time * 2 | 0) % 2 === 0) drawHint('◀◀ 請左打ち', '#4aa8ff');
+  if (st.rightHint === 1 && (st.time * 2 | 0) % 2 === 0) drawHint('請右打 ▶▶', '#ff4a5a');
+  if (st.rightHint === -1 && (st.time * 2 | 0) % 2 === 0) drawHint('◀◀ 請左打', '#4aa8ff');
 }
 function drawHint(t, col) {
   ctx.font = '900 40px "PingFang TC","Noto Sans TC",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -864,17 +939,17 @@ function drawBoard() {
   ctx.fillStyle = '#1b1530'; ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 3;
   roundRect(hx - 20, hy - 6, 40, 26, 6); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#000'; ctx.fillRect(hx - 13, hy - 6, 26, 10);
-  ctx.font = '700 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffd23f'; ctx.fillText('START', hx, hy + 13);
+  ctx.font = '700 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffd23f'; ctx.fillText('啟動口', hx, hy + 13);
   // gate
   ctx.strokeStyle = '#7ff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc((g.laneX + g.R) / 2, g.gateY + 6, 18, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
-  ctx.font = '700 10px sans-serif'; ctx.fillStyle = '#7ff'; ctx.fillText('GATE', (g.laneX + g.R) / 2, g.gateY + 16);
+  ctx.font = '700 10px sans-serif'; ctx.fillStyle = '#7ff'; ctx.fillText('通過口', (g.laneX + g.R) / 2, g.gateY + 16);
   // denchu
   const dx = (g.laneX + g.R) / 2 + 2, dy = g.denY, op = st.denchu.open;
   ctx.fillStyle = op ? '#ff2a3c' : '#5a1c26';
   ctx.save(); ctx.translate(dx - 14, dy); ctx.rotate(op ? -0.9 : 0); ctx.fillRect(-2, -14, 5, 18); ctx.restore();
   ctx.save(); ctx.translate(dx + 14, dy); ctx.rotate(op ? 0.9 : 0); ctx.fillRect(-3, -14, 5, 18); ctx.restore();
   ctx.fillStyle = '#1b1530'; roundRect(dx - 16, dy + 2, 32, 16, 4); ctx.fill();
-  ctx.font = '700 9px sans-serif'; ctx.fillStyle = op ? '#fff' : '#c88'; ctx.fillText('電チュー', dx, dy + 10);
+  ctx.font = '700 9px sans-serif'; ctx.fillStyle = op ? '#fff' : '#c88'; ctx.fillText('電動', dx, dy + 10);
   // attacker
   const f = g.floor, ao = st.attacker.open;
   ctx.save(); ctx.strokeStyle = ao ? '#ffd23f' : '#8a7a40'; ctx.lineWidth = 10; ctx.lineCap = 'butt';
@@ -882,7 +957,7 @@ function drawBoard() {
   const ax1 = f[0] + (f[2] - f[0]) * t2, ay1 = f[1] + (f[3] - f[1]) * t2, ax2 = f[0] + (f[2] - f[0]) * t1, ay2 = f[1] + (f[3] - f[1]) * t1;
   if (ao) { ctx.globalAlpha = 0.35 + 0.3 * Math.sin(st.time * 20); }
   ctx.beginPath(); ctx.moveTo(ax1, ay1 + 6); ctx.lineTo(ax2, ay2 + 6); ctx.stroke(); ctx.globalAlpha = 1; ctx.restore();
-  ctx.font = '800 12px sans-serif'; ctx.fillStyle = ao ? '#ffd23f' : '#a99'; ctx.fillText(ao ? `OPEN ${st.attacker.count}/10` : 'ATTACKER', (ax1 + ax2) / 2 - 6, (ay1 + ay2) / 2 + 26);
+  ctx.font = '800 12px sans-serif'; ctx.fillStyle = ao ? '#ffd23f' : '#a99'; ctx.fillText(ao ? `開放 ${st.attacker.count}/10` : '大獎口', (ax1 + ax2) / 2 - 6, (ay1 + ay2) / 2 + 26);
   // pockets
   for (const p of g.pockets) { ctx.fillStyle = '#1b1530'; ctx.strokeStyle = '#9c5cff'; ctx.lineWidth = 2; roundRect(p.x - 14, p.y - 4, 28, 16, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#000'; ctx.fillRect(p.x - 10, p.y - 4, 20, 6); }
   // out hole
@@ -923,10 +998,10 @@ function drawLCD() {
     ctx.globalCompositeOperation = 'screen'; if (b.complete) ctx.drawImage(b, l.x0 + w / 2 - s / 2, l.y0 + h / 2 - s / 2, s, s); ctx.globalCompositeOperation = 'source-over';
   }
   for (const o of st.overlays) {
-    const k = (st.time - o.t0) / o.dur, img = o.img; if (!img || !img.complete) continue;
+    const k = (st.time - o.t0) / o.dur, img = o.img; if (!img || !(img.width || img.complete)) continue;
     const pop = k < 0.12 ? 0.6 + k / 0.12 * 0.5 : k < 0.2 ? 1.1 - (k - 0.12) / 0.08 * 0.1 : 1;
-    const ow = w * o.s * pop, oh = ow * img.naturalHeight / img.naturalWidth;
-    ctx.globalAlpha = k > 0.85 ? (1 - k) / 0.15 : 1; ctx.globalCompositeOperation = 'screen';
+    const ow = w * o.s * pop, oh = ow * (img.naturalHeight || img.height) / (img.naturalWidth || img.width);
+    ctx.globalAlpha = k > 0.85 ? (1 - k) / 0.15 : 1;
     ctx.drawImage(img, l.x0 + (w - ow) / 2, l.y0 + h * o.y - oh / 2, ow, oh);
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   }
@@ -950,7 +1025,7 @@ function drawLCD() {
   if (st.holds.length >= 4 && st.time - st.fullT < 1.5) { ctx.textAlign = 'left'; ctx.font = '900 13px "PingFang TC",sans-serif'; ctx.fillStyle = (st.time * 6 | 0) % 2 ? '#ffd23f' : '#fff'; ctx.fillText('保留滿', l.x0 + 56 + 4 * 34 - 8, hy); }
   // status at right
   ctx.textAlign = 'right'; ctx.fillStyle = st.rush ? '#ff6b7a' : '#9ad0ff'; ctx.font = '800 13px sans-serif';
-  ctx.fillText(st.inJackpot ? `大当り中 出玉 ${st.payoutRound}` : st.rush ? `RUSH 殘 ${st.stLeft} 回・累計 ${(st.rushTotal || 0).toLocaleString()} 玉` : `1/99`, l.x1 - 4, hy);
+  ctx.fillText(st.inJackpot ? `大獎中 出珠 ${st.payoutRound}` : st.rush ? `RUSH 剩 ${st.stLeft} 轉·累計 ${(st.rushTotal || 0).toLocaleString()} 顆` : `1/99`, l.x1 - 4, hy);
 }
 function drawHold(color, x, y, r) {
   const img = IMG['hold_' + color];
@@ -973,11 +1048,12 @@ function drawReels(l, w, h) {
     roundRect(x, y0, cw, ch, Math.max(6, 14 * m)); ctx.fillStyle = idleDim ? 'rgba(6,8,24,0.55)' : 'rgba(6,8,24,0.75)'; ctx.fill();
     ctx.strokeStyle = r.spin ? '#ffffff55' : '#ffd23faa'; ctx.lineWidth = 2; ctx.stroke();
     ctx.clip();
-    if (r.q === 'next') { const fs = Math.min(cw, ch) * 0.3; ctx.font = `900 ${fs}px "Arial Black",sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#5ff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 4; ctx.strokeText('NEXT', x + cw / 2, y0 + ch / 2); ctx.fillText('NEXT', x + cw / 2, y0 + ch / 2); }
+    if (r.q === 'next') { const fs = Math.min(cw, ch) * 0.3; ctx.font = `900 ${fs}px "Arial Black",sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#5ff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 4; ctx.strokeText('繼續', x + cw / 2, y0 + ch / 2); ctx.fillText('繼續', x + cw / 2, y0 + ch / 2); }
     else if (r.q) { drawQ(x, y0, cw, ch); }
     else if (r.spin) {
-      const p = r.pos, base = Math.floor(p), frac = p - base;
-      for (let k = -1; k <= 1; k++) { const num = ((base + k) % 9 + 9) % 9 + 1; drawSym(num, x, y0 + (k + frac) * ch * 0.92, cw, ch, 0.55); }
+      // centre shows floor(pos)+1 sliding down; the next number (+1) enters from above, so nothing ever jumps
+      const p = r.pos, base = Math.floor(p), frac = p - base, a = 0.55 + 0.45 * Math.max(0, 1 - r.speed / 8);
+      for (let k = -1; k <= 1; k++) { const num = ((base - k) % 9 + 9) % 9 + 1; drawSym(num, x, y0 + (k + frac) * ch, cw, ch, a); }
     } else {
       const bo = Math.sin(r.bounce * 6) * r.bounce * 0.12 * ch;
       drawSym(r.num, x, y0 + bo, cw, ch, 1);
@@ -1011,7 +1087,7 @@ function drawStep(l, w, h) {
   ctx.fillStyle = cols[s.l - 1] + 'dd'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
   roundRect(-bw / 2, -bh / 2, bw, bh, 12); ctx.fill(); ctx.stroke();
   ctx.font = `900 ${30 + s.l * 6}px "Arial Black",sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
-  ctx.fillText(`STEP ${s.l}`, 0, 0);
+  ctx.fillText(`階段 ${s.l}`, 0, 0);
   ctx.restore();
 }
 function drawResult(l, w, h) {
@@ -1019,36 +1095,36 @@ function drawResult(l, w, h) {
   ctx.fillStyle = '#000c'; ctx.fillRect(l.x0, l.y0, w, h);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const cx = l.x0 + w / 2;
   ctx.font = '900 30px "PingFang TC","Noto Sans TC",sans-serif'; ctx.fillStyle = '#fff';
-  ctx.fillText(`大当り ${r.rounds}R 終了`, cx, l.y0 + h * 0.2);
+  ctx.fillText(`大獎 ${r.rounds} 回合結束`, cx, l.y0 + h * 0.2);
   ctx.font = '900 66px "Arial Black",sans-serif'; ctx.fillStyle = `hsl(${45 + Math.sin(st.time * 6) * 8} 100% 60%)`;
-  ctx.lineWidth = 6; ctx.strokeStyle = '#000'; ctx.strokeText(`${shown.toLocaleString()} 玉`, cx, l.y0 + h * 0.47); ctx.fillText(`${shown.toLocaleString()} 玉`, cx, l.y0 + h * 0.47);
+  ctx.lineWidth = 6; ctx.strokeStyle = '#000'; ctx.strokeText(`${shown.toLocaleString()} 顆`, cx, l.y0 + h * 0.47); ctx.fillText(`${shown.toLocaleString()} 顆`, cx, l.y0 + h * 0.47);
   ctx.font = '800 22px "PingFang TC",sans-serif'; ctx.fillStyle = r.rush ? '#ff6b7a' : '#9ad0ff';
-  ctx.fillText(r.rush ? `${r.chain} 連　RUSH 累計 ${r.total.toLocaleString()} 玉` : '3R 當り・回到通常模式', cx, l.y0 + h * 0.72);
+  ctx.fillText(r.rush ? `${r.chain} 連　RUSH 累計 ${r.total.toLocaleString()} 顆` : '3 回合中獎·回到一般模式', cx, l.y0 + h * 0.72);
   ctx.font = '700 16px "PingFang TC",sans-serif'; ctx.fillStyle = '#ccc';
-  ctx.fillText(`持ち玉 ${S.balls.toLocaleString()}`, cx, l.y0 + h * 0.88);
+  ctx.fillText(`持有鋼珠 ${S.balls.toLocaleString()}`, cx, l.y0 + h * 0.88);
 }
 function drawRushSum(l, w, h) {
   const r = st.rushSum, k = Math.min(1, (st.time - r.t0) / 1.2), shown = Math.round(r.total * k);
   ctx.fillStyle = '#000d'; ctx.fillRect(l.x0, l.y0, w, h);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const cx = l.x0 + w / 2;
   ctx.font = '900 30px "PingFang TC","Noto Sans TC",sans-serif'; ctx.fillStyle = '#ff8a96';
-  ctx.fillText('雷光 RUSH 終了', cx, l.y0 + h * 0.17);
+  ctx.fillText('雷光 RUSH 結束', cx, l.y0 + h * 0.17);
   ctx.font = '900 54px "Arial Black",sans-serif'; ctx.fillStyle = '#fff'; ctx.lineWidth = 6; ctx.strokeStyle = '#000';
   ctx.strokeText(`${r.chain} 連`, cx, l.y0 + h * 0.38); ctx.fillText(`${r.chain} 連`, cx, l.y0 + h * 0.38);
   ctx.font = '900 46px "Arial Black",sans-serif'; ctx.fillStyle = `hsl(${45 + Math.sin(st.time * 6) * 8} 100% 60%)`;
-  ctx.strokeText(`${shown.toLocaleString()} 玉`, cx, l.y0 + h * 0.6); ctx.fillText(`${shown.toLocaleString()} 玉`, cx, l.y0 + h * 0.6);
+  ctx.strokeText(`${shown.toLocaleString()} 顆`, cx, l.y0 + h * 0.6); ctx.fillText(`${shown.toLocaleString()} 顆`, cx, l.y0 + h * 0.6);
   ctx.font = '800 20px "PingFang TC",sans-serif'; ctx.fillStyle = r.best ? '#ffd23f' : '#ccc';
-  ctx.fillText(r.best ? '★ RUSH 最高紀錄更新！' : `RUSH 最高紀錄 ${S.stats.bestRush.toLocaleString()} 玉`, cx, l.y0 + h * 0.8);
+  ctx.fillText(r.best ? '★ RUSH 最高紀錄更新！' : `RUSH 最高紀錄 ${S.stats.bestRush.toLocaleString()} 顆`, cx, l.y0 + h * 0.8);
   ctx.font = '700 16px "PingFang TC",sans-serif'; ctx.fillStyle = '#ccc';
-  ctx.fillText(`持ち玉 ${S.balls.toLocaleString()}`, cx, l.y0 + h * 0.92);
+  ctx.fillText(`持有鋼珠 ${S.balls.toLocaleString()}`, cx, l.y0 + h * 0.92);
 }
 function drawRound(l, w, h) {
   ctx.fillStyle = '#0008'; ctx.fillRect(l.x0, l.y1 - 74, w, 74);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = '900 40px "Arial Black",sans-serif'; ctx.fillStyle = '#ffd23f';
-  ctx.fillText(`ROUND ${st.round.r} / ${st.round.of}`, l.x0 + w / 2, l.y1 - 48);
+  ctx.fillText(`第 ${st.round.r} / ${st.round.of} 回合`, l.x0 + w / 2, l.y1 - 48);
   ctx.font = '800 18px "PingFang TC",sans-serif'; ctx.fillStyle = '#fff';
-  ctx.fillText(`獲得 ${st.payoutRound} 顆  ·  請右打ち ▶`, l.x0 + w / 2, l.y1 - 16);
+  ctx.fillText(`獲得 ${st.payoutRound} 顆  ·  請右打 ▶`, l.x0 + w / 2, l.y1 - 16);
 }
 
 // ---------- UI ----------
@@ -1058,7 +1134,7 @@ function autoSide(right) { if (S.autoSide) setSide(right); }
 elFire.addEventListener('click', () => setFiring(!st.firing));
 $('sideL').addEventListener('click', () => setSide(false));
 $('sideR').addEventListener('click', () => setSide(true));
-$('lend').addEventListener('click', () => { S.balls += LEND; S.stats.invest += LEND; dirty = true; $('lend').classList.remove('hot'); toast(`借玉 ${LEND} 顆`); renderStats(); });
+$('lend').addEventListener('click', () => { S.balls += LEND; S.stats.invest += LEND; dirty = true; $('lend').classList.remove('hot'); toast(`借珠 ${LEND} 顆`); renderStats(); });
 elPush.addEventListener('click', pressPush);
 cv.addEventListener('pointerdown', e => {
   const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / scale, y = (e.clientY - r.top) / scale, l = geo.lcd;
@@ -1098,7 +1174,7 @@ $('optSkip').addEventListener('change', e => { S.skip = e.target.checked ? '1' :
 $('optAuto').addEventListener('change', e => { S.autoSide = e.target.checked; dirty = true; });
 $('btnReset').addEventListener('click', () => { if (!confirm('清除所有存檔、統計和成就，從頭開始？')) return; try { localStorage.removeItem(SAVE_KEY); } catch (e) {} location.href = location.pathname; });
 
-// theoretical 信賴度 from the draw tables (通常時), computed once at load
+// theoretical 信賴度 from the draw tables (一般時), computed once at load
 const THEORY = (() => {
   const t = {}, add = (k, hit) => { const e = t[k] || (t[k] = [0, 0]); e[0]++; if (hit) e[1]++; };
   const keep = st.force; st.force = null;
@@ -1116,9 +1192,9 @@ const THEORY = (() => {
   return t;
 })();
 const TRUST_ROWS = [
-  ['reach_normal', 'ノーマルリーチ'], ['reach_sp', 'SP リーチ（全部）'], ['line_meowth', '　SP 喵喵搶球'], ['line_gengar', '　SP 耿鬼'], ['line_sky', '　SP 噴火龍空中戰'], ['reach_spsp', 'SPSP リーチ（全部）'], ['line_mewtwo', '　SPSP 超夢'], ['line_birds', '　SPSP 三神鳥'], ['cutin_sp', 'SP＋紅カットイン'], ['cutin_spsp', 'SPSP＋紅カットイン'],
-  ['cut_blue', '藍カットイン（傑尼龜）'], ['cut_green', '綠カットイン（妙蛙種子）'], ['cut_red', '紅カットイン（噴火龍）'], ['cut_gold', '金カットイン（皮卡丘）'],
-  ['group', '群予告（全部）'], ['group_cater', '　綠毛蟲'], ['group_pidgey', '　波波'], ['group_magi', '　鯉魚王'], ['giji2', '擬似連 ×2'], ['giji3', '擬似連 ×3'], ['step3', 'STEP 3'], ['step4', 'STEP 4'], ['step5', 'STEP 5'],
+  ['reach_normal', '普通聽牌'], ['reach_sp', '強聽牌（全部）'], ['line_meowth', '　喵喵搶球'], ['line_gengar', '　耿鬼'], ['line_sky', '　噴火龍空中戰'], ['reach_spsp', '超強聽牌（全部）'], ['line_mewtwo', '　超夢'], ['line_birds', '　三神鳥'], ['cutin_sp', '強聽牌＋切入'], ['cutin_spsp', '超強聽牌＋切入'],
+  ['cut_blue', '藍切入（傑尼龜）'], ['cut_green', '綠切入（妙蛙種子）'], ['cut_red', '紅切入（噴火龍）'], ['cut_gold', '金切入（皮卡丘）'],
+  ['group', '群體預告（全部）'], ['group_cater', '　綠毛蟲'], ['group_pidgey', '　波波'], ['group_magi', '　鯉魚王'], ['giji2', '假連續 ×2'], ['giji3', '假連續 ×3'], ['step3', '階段預告 3'], ['step4', '階段預告 4'], ['step5', '階段預告 5'],
   ['hold_blue', '藍保留'], ['hold_green', '綠保留'], ['hold_red', '紅保留'], ['hold_gold', '金保留'], ['hold_rainbow', '虹保留'],
 ];
 const pct = (a, b) => b ? (a / b * 100) : null;
@@ -1132,20 +1208,20 @@ function renderStats() {
   const prob = s.firstHits ? `1/${(s.spinsNormal / s.firstHits).toFixed(1)}` : '—';
   const rate = s.firedNormal >= 250 ? (s.spinsNormal / s.firedNormal * 250).toFixed(1) + ' 轉' : '—';
   const rows = [
-    ['投資（開局＋借玉）', num(s.invest)], ['持ち玉', num(S.balls)], ['收支', `<b class="${diff >= 0 ? 'pos' : 'neg'}">${signed(diff)}</b>`],
-    ['發射', num(s.fired)], ['獲得', num(s.got)], ['現在ハマリ', `${s.hamari} 轉`], ['最大ハマリ', `${s.maxHamari} 轉`],
-    ['初当り確率（實測）', `${prob}<small> / 理論 1/99</small>`], ['回転率（每 250 顆）', rate],
+    ['投資（開局＋借珠）', num(s.invest)], ['持有鋼珠', num(S.balls)], ['收支', `<b class="${diff >= 0 ? 'pos' : 'neg'}">${signed(diff)}</b>`],
+    ['發射', num(s.fired)], ['獲得', num(s.got)], ['目前未中轉數', `${s.hamari} 轉`], ['最長未中轉數', `${s.maxHamari} 轉`],
+    ['首次大獎機率（實測）', `${prob}<small> / 理論 1/99</small>`], ['回轉率（每 250 顆）', rate],
     ['RUSH 突入率', s.firstHits ? `${rateP(pct(s.rush, s.firstHits))}<small> / 理論 60%</small>` : '—'],
-    ['ST 継続率', s.rushEnds + s.rushHits ? `${rateP(pct(s.rushHits, s.rushHits + s.rushEnds))}<small> / 理論 82%</small>` : '—'],
-    ['平均連荘', s.rushEnds ? (s.chainSum / s.rushEnds).toFixed(1) + ' 連' : '—'],
-    ['單次最高出玉', num(s.bestSingle)], ['RUSH 最高出玉', num(s.bestRush)], ['遊玩時間', fmtTime(s.playSec)],
+    ['RUSH 續航率', s.rushEnds + s.rushHits ? `${rateP(pct(s.rushHits, s.rushHits + s.rushEnds))}<small> / 理論 82%</small>` : '—'],
+    ['平均連莊', s.rushEnds ? (s.chainSum / s.rushEnds).toFixed(1) + ' 連' : '—'],
+    ['單次最高出珠', num(s.bestSingle)], ['RUSH 最高出珠', num(s.bestRush)], ['遊玩時間', fmtTime(s.playSec)],
   ];
   $('stats').innerHTML = rows.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('');
-  $('hist').innerHTML = S.hist.length ? S.hist.map(x => `<tr><td>${x.chain > 1 ? x.chain + ' 連' : x.ham != null ? x.ham + ' 轉' : ''}</td><td>${x.sym ? `<img src="assets/sym/s${x.sym}.webp" alt="">${x.sym}` : ''}</td><td>${x.r}R${x.rush ? '<i>RUSH</i>' : ''}</td><td>+${num(x.got)}</td></tr>`).join('') : '<tr><td colspan="4" class="dim">還沒有大当り</td></tr>';
+  $('hist').innerHTML = S.hist.length ? S.hist.map(x => `<tr><td>${x.chain > 1 ? x.chain + ' 連' : x.ham != null ? x.ham + ' 轉' : ''}</td><td>${x.sym ? `<img src="assets/sym/s${x.sym}.webp" alt="">${x.sym}` : ''}</td><td>${x.r} 回合${x.rush ? '<i>RUSH</i>' : ''}</td><td>+${num(x.got)}</td></tr>`).join('') : '<tr><td colspan="4" class="dim">還沒有大獎</td></tr>';
   $('trust').innerHTML = '<tr><th>演出</th><th>理論</th><th>你的</th></tr>' + TRUST_ROWS.map(([k, label]) => {
     const t = THEORY[k], m = s.eff[k];
     return `<tr><td>${label}</td><td>${t ? fmtP(pct(t[1], t[0])) : '—'}</td><td>${m ? `${rateP(pct(m[1], m[0]))}<small> (${m[1]}/${m[0]})</small>` : '—'}</td></tr>`;
-  }).join('') + '<tr><td>全回轉（夢幻）</td><td>必中</td><td>—</td></tr><tr><td>夢幻泡泡（プレミア）</td><td>必中</td><td>—</td></tr>';
+  }).join('') + '<tr><td>全回轉（夢幻）</td><td>必中</td><td>—</td></tr><tr><td>夢幻泡泡（稀有）</td><td>必中</td><td>—</td></tr>';
   $('achN').textContent = `${Object.keys(S.ach).length} / ${ACH.length}`;
   $('ach').innerHTML = ACH.map(([id, name, desc]) => `<li class="${S.ach[id] ? 'got' : ''}"><span>${S.ach[id] ? '🏆' : '🔒'}</span><b>${name}</b><small>${desc}</small></li>`).join('');
   drawSlump();

@@ -7,7 +7,7 @@
 <title>P 寶可夢 雷光RUSH</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+TC:wght@900&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#07060f;--panel:#110e22;--panel2:#181433;--line:#2c2650;--txt:#f3f0ff;--dim:#9a93c4;--gold:#ffd23f;--gold2:#ffb000;--red:#ff4a5a;--blue:#4aa8ff;--pos:#7dff9a;--neg:#ff7a86;--seg:"Orbitron","Arial Black",system-ui,sans-serif}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -157,16 +157,16 @@ canvas#board{display:block}
   <aside id="left" class="panel">
     <h2>遊戲資料 <button class="sheetClose" aria-label="關閉">✕</button></h2>
     <div class="tiles">
-      <div class="tile"><small>大当り</small><b id="tHits">0</b></div>
-      <div class="tile"><small>初当り</small><b id="tFirst">0</b></div>
+      <div class="tile"><small>大獎</small><b id="tHits">0</b></div>
+      <div class="tile"><small>首次大獎</small><b id="tFirst">0</b></div>
       <div class="tile"><small>總回轉</small><b id="tSpins">0</b></div>
-      <div class="tile"><small>最高連荘</small><b id="tChain">0</b></div>
+      <div class="tile"><small>最高連莊</small><b id="tChain">0</b></div>
     </div>
     <h3>收支與機率</h3>
     <table id="stats"></table>
-    <h3>鋼珠增減圖 <small>收支，每轉一點，黃線＝大当り</small></h3>
+    <h3>鋼珠增減圖 <small>收支，每轉一點，黃線＝大獎</small></h3>
     <canvas id="slump"></canvas>
-    <h3>大当り履歴 <small>ハマリ／連・圖柄・R・出玉</small></h3>
+    <h3>大獎紀錄 <small>未中轉數或連莊·圖柄·回合·出珠</small></h3>
     <div id="histWrap"><table id="hist"></table></div>
   </aside>
 
@@ -175,7 +175,7 @@ canvas#board{display:block}
       <button class="ib" id="btnStats" title="遊戲資料">📊</button>
       <img class="logo" src="assets/ui/logo.webp" alt="雷光RUSH">
       <div id="counter">
-        <div class="seg"><small>大当り</small><b id="cHits">0</b></div>
+        <div class="seg"><small>大獎</small><b id="cHits">0</b></div>
         <div class="seg"><small>RUSH</small><b id="cRush">0</b></div>
         <div class="seg g"><small>總回轉</small><b id="cSpins">0</b></div>
         <div class="seg g"><small id="cNowL">現在</small><b id="cNow">0</b></div>
@@ -187,16 +187,16 @@ canvas#board{display:block}
     <div id="cabinet"><div id="frame"><div id="stage"><canvas id="board"></canvas></div></div></div>
     <div id="deck">
       <div class="tray">
-        <small>持ち玉</small><b id="balls">2,000</b>
+        <small>持有鋼珠</small><b id="balls">2,000</b>
         <em>收支 <span id="diff" class="pos">+0</span>　<span id="mode">模式 <b id="modeTxt">通常</b></span></em>
       </div>
-      <button id="lend" title="借玉（B）"><b>借玉</b>500</button>
+      <button id="lend" title="借珠（B）"><b>借珠</b>500</button>
       <div class="sides">
-        <button class="side on" id="sideL"><b>◀ 左打ち</b><small>通常時・進 START</small></button>
-        <button class="side" id="sideR"><b>右打ち ▶</b><small>大当り・RUSH 中</small></button>
+        <button class="side on" id="sideL"><b>◀ 左打</b><small>一般時·進啟動口</small></button>
+        <button class="side" id="sideR"><b>右打 ▶</b><small>大獎·RUSH 中</small></button>
       </div>
       <button id="fire"><b>發射</b><small>點擊開始</small></button>
-      <button id="push" title="PUSH（Enter）"></button>
+      <button id="push" title="揭曉鈕（Enter）"></button>
     </div>
   </main>
 
@@ -208,31 +208,31 @@ canvas#board{display:block}
     <ul id="ach"></ul>
     <h3>怎麼玩</h3>
     <div class="howto">
-      <p>按<b>發射</b>開始打珠。平常用<b>左打ち</b>，讓珠子進液晶下方的 START，每進一顆抽一次大獎（1/99），轉輪在轉時最多存 4 個保留。</p>
-      <p>中<b>大当り</b>後改<b>右打ち</b>，把珠子打進右下打開的大獎口：每顆 +15，<b>10R 約 1,500 顆</b>、<b>3R 約 450 顆</b>。（設定裡的「自動切換」開著時會自己換邊。）</p>
-      <p>停在<b>奇數</b>＝10R＋雷光 RUSH，<b>偶數</b>＝3R（3R 最後有機會<b>進化昇格</b>成 RUSH）。RUSH 是 20 轉內 1/12 的高機率，約 82% 會再中；RUSH 中右打ち讓珠子過 GATE、打開電チュー。</p>
-      <p>聽牌時那隻寶可夢會出場。SP／SPSP 高潮出現 <b>PUSH</b> 時按下去揭曉。</p>
-      <p>珠子打完就按<b>借玉</b>，借的珠會算進「投資」。</p>
+      <p>按<b>發射</b>開始打珠。平常用<b>左打</b>，讓珠子進液晶下方的<b>啟動口</b>，每進一顆抽一次大獎（1/99），轉輪在轉時最多存 4 個保留。</p>
+      <p>中<b>大獎</b>後改<b>右打</b>，把珠子打進右下打開的大獎口：每顆 +15，<b>10 回合約 1,500 顆</b>、<b>3 回合約 450 顆</b>。（設定裡的「自動切換」開著時會自己換邊。）</p>
+      <p>停在<b>奇數</b>＝10 回合＋雷光 RUSH，<b>偶數</b>＝3 回合（最後有機會<b>進化昇格</b>成 RUSH）。RUSH 是 20 轉內 1/12 的高機率，約 82% 會再中；RUSH 中右打，讓珠子經過通過口、打開電動役物。</p>
+      <p>聽牌時那隻寶可夢會出場，中間轉輪會越轉越慢：停在同號就中，差一號或過一號就沒中。強聽牌、超強聽牌高潮時，<b>揭曉鈕（PUSH）</b>亮起就按下去。</p>
+      <p>珠子打完就按<b>借珠</b>，借的珠會算進「投資」。</p>
     </div>
     <table class="keys">
       <tr><td><kbd>Space</kbd></td><td>發射／停止</td></tr>
-      <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>左打ち／右打ち</td></tr>
-      <tr><td><kbd>Enter</kbd> <kbd>Z</kbd></td><td>PUSH、跳過長影片</td></tr>
-      <tr><td><kbd>B</kbd></td><td>借玉 500</td></tr>
+      <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>左打／右打</td></tr>
+      <tr><td><kbd>Enter</kbd> <kbd>Z</kbd></td><td>揭曉鈕、跳過長影片</td></tr>
+      <tr><td><kbd>B</kbd></td><td>借珠 500</td></tr>
       <tr><td><kbd>P</kbd></td><td>暫停</td></tr>
     </table>
     <h3>洞口</h3>
     <table class="keys">
-      <tr><td><b>START</b><br><small>液晶正下方金框</small></td><td>+3 顆，抽一次大獎</td></tr>
-      <tr><td><b>GATE</b><br><small>右側通道上方</small></td><td>RUSH 中通過就打開電チュー</td></tr>
-      <tr><td><b>電チュー</b><br><small>右側紅翅膀</small></td><td>+1 顆，也抽大獎</td></tr>
-      <tr><td><b>ATTACKER</b><br><small>右下金色斜板</small></td><td>大当り時打開，每顆 +15</td></tr>
+      <tr><td><b>啟動口</b><br><small>液晶正下方金框</small></td><td>+3 顆，抽一次大獎</td></tr>
+      <tr><td><b>通過口</b><br><small>右側通道上方</small></td><td>RUSH 中通過就打開電動役物</td></tr>
+      <tr><td><b>電動役物</b><br><small>右側紅翅膀</small></td><td>+1 顆，也抽大獎</td></tr>
+      <tr><td><b>大獎口</b><br><small>右下金色斜板</small></td><td>大獎時打開，每顆 +15</td></tr>
       <tr><td><b>紫框小洞</b></td><td>+5 顆，不抽獎</td></tr>
     </table>
     <h3>設定</h3>
     <div class="row"><label>影片音量</label><input type="range" id="volVid" min="0" max="100" value="80"></div>
     <div class="row"><label>音效音量</label><input type="range" id="volSfx" min="0" max="100" value="60"></div>
-    <div class="row check"><label for="optAuto">大当り／RUSH 自動切換左右打ち</label><input type="checkbox" id="optAuto" checked></div>
+    <div class="row check"><label for="optAuto">大獎／RUSH 自動切換左右打</label><input type="checkbox" id="optAuto" checked></div>
     <div class="row check"><label for="optSkip">長影片播 3 秒後可點液晶跳過</label><input type="checkbox" id="optSkip" checked></div>
     <button class="btn warn" id="btnReset">全部重來</button>
     <p class="note">仿近代日本數位柏青哥的網頁遊戲。演出影片用 MiniMax H3 生成。非官方粉絲作品，寶可夢相關權利屬於原權利人。本遊戲沒有任何真實金錢輸贏或兌換。</p>
@@ -248,6 +248,6 @@ canvas#board{display:block}
 </div>
 <div class="overlay hide" id="pauseOv"><h2>暫停中</h2><button class="go" id="btnResume">繼續</button></div>
 <div id="vids"></div>
-<script src="game.js?v=5"></script>
+<script src="game.js?v=6"></script>
 </body>
 </html>
