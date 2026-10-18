@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#07060f">
+<title>P 寶可夢 雷光RUSH</title>
+<style>
+:root{--bg:#07060f;--panel:#141126;--line:#2c2650;--txt:#f3f0ff;--dim:#9a93c4;--gold:#ffd23f;--red:#ff4a5a;--blue:#4aa8ff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;overscroll-behavior:none;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+header{flex:none;width:100%;max-width:760px;height:48px;display:flex;align-items:center;gap:8px;padding:0 10px}
+header .logo{height:38px;width:auto;mix-blend-mode:screen}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px 10px;font-size:13px;line-height:1.15;white-space:nowrap}
+.chip b{display:block;font-size:16px;color:var(--gold);font-variant-numeric:tabular-nums}
+#mode b{color:var(--blue)}
+#mode.rush b{color:var(--red)}
+.sp{flex:1}
+.ib{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--txt);font-size:18px;display:grid;place-items:center;cursor:pointer;padding:0}
+.ib:active{transform:scale(.94)}
+#stage{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;position:relative}
+canvas#board{display:block;border-radius:18px;box-shadow:0 0 0 2px #2a2448,0 10px 40px #000a}
+#controls{flex:none;width:100%;max-width:760px;height:84px;display:flex;align-items:center;gap:10px;padding:6px 12px}
+#powerWrap{flex:1;display:flex;flex-direction:column;gap:2px}
+#powerWrap .lab{display:flex;justify-content:space-between;font-size:12px;color:var(--dim)}
+#powerWrap .lab span.on{color:var(--gold);font-weight:700}
+#powerWrap .lab i{font-style:normal}
+input[type=range]{width:100%;height:34px;-webkit-appearance:none;appearance:none;background:transparent}
+input[type=range]::-webkit-slider-runnable-track{height:12px;border-radius:6px;background:linear-gradient(90deg,#3a7bff,#9c5cff 55%,#ff4a5a)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;margin-top:-9px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,#c9c9d9 60%,#7d7d92);border:2px solid #fff}
+input[type=range]::-moz-range-track{height:12px;border-radius:6px;background:linear-gradient(90deg,#3a7bff,#9c5cff 55%,#ff4a5a)}
+input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:#eee;border:2px solid #fff}
+#fire{width:84px;height:62px;border-radius:16px;border:2px solid #3b3466;background:linear-gradient(#272046,#17132c);color:var(--txt);font-size:16px;font-weight:800;cursor:pointer;line-height:1.1}
+#fire.on{border-color:var(--gold);background:linear-gradient(#5a4300,#2b2000);color:var(--gold);box-shadow:0 0 18px #ffd23f66}
+#push{width:66px;height:66px;border:none;border-radius:50%;background:url(assets/ui/btn_push.webp) center/120% no-repeat #000;cursor:pointer;filter:grayscale(.85) brightness(.55);transition:filter .2s}
+#push.live{filter:none;animation:pulse .5s infinite alternate}
+@keyframes pulse{to{transform:scale(1.1)}}
+#drawer{position:fixed;top:0;right:0;bottom:0;width:min(360px,88vw);background:#110e22f2;backdrop-filter:blur(8px);border-left:1px solid var(--line);transform:translateX(105%);transition:transform .25s;z-index:20;display:flex;flex-direction:column}
+#drawer.open{transform:none}
+#drawer .hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);font-weight:700}
+#drawer .bd{flex:1;overflow:auto;padding:12px 14px;font-size:14px;line-height:1.5}
+#drawer h3{margin:14px 0 6px;font-size:14px;color:var(--gold)}
+#drawer table{width:100%;border-collapse:collapse;font-size:13px}
+#drawer td,#drawer th{border-bottom:1px solid #251f44;padding:4px 2px;text-align:left}
+#drawer td:last-child,#drawer th:last-child{text-align:right}
+#drawer .row{display:flex;align-items:center;gap:8px;margin:6px 0}
+#drawer .row label{width:72px;color:var(--dim)}
+#drawer .row input{flex:1;height:26px}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--txt);border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer;margin:4px 4px 4px 0}
+.btn.warn{border-color:#5a2230;color:#ff8a96}
+#hist{font-size:13px;color:var(--dim);max-height:160px;overflow:auto}
+#scrim{position:fixed;inset:0;background:#0008;z-index:19;display:none}
+#scrim.on{display:block}
+.overlay{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(circle at 50% 40%,#231a4a,#07060fee 70%);text-align:center;padding:24px}
+.overlay img{width:min(560px,90vw);mix-blend-mode:screen}
+.overlay p{margin:0;color:var(--dim);font-size:14px;max-width:420px;line-height:1.6}
+.overlay .go{font-size:20px;font-weight:800;padding:14px 34px;border-radius:16px;border:2px solid var(--gold);background:#2b2000;color:var(--gold);cursor:pointer}
+.hide{display:none!important}
+#pauseOv{background:#07060fcc}
+#pauseOv h2{margin:0;font-size:32px;letter-spacing:6px}
+#vids{position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none;overflow:hidden}
+@media (max-width:520px){#powerWrap .lab i.long{display:none}}
+@media (max-width:420px){header .logo{height:30px}.chip{padding:3px 7px;font-size:11px}.chip b{font-size:14px}.ib{width:36px;height:36px}#fire{width:72px}#push{width:58px;height:58px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <img class="logo" src="assets/ui/logo.webp" alt="雷光RUSH">
+    <div class="chip">持ち玉<b id="balls">1000</b></div>
+    <div class="chip" id="mode">模式<b id="modeTxt">通常</b></div>
+    <div class="sp"></div>
+    <button class="ib" id="btnSound" title="聲音">🔊</button>
+    <button class="ib" id="btnPause" title="暫停">⏸</button>
+    <button class="ib" id="btnMenu" title="選單">☰</button>
+  </header>
+  <div id="stage"><canvas id="board"></canvas></div>
+  <div id="controls">
+    <div id="powerWrap">
+      <div class="lab"><span id="labL">◀ 左打ち<i class="long">（中央入賞口）</i></span><span id="labR">右打ち<i class="long">（電チュー・大獎口）</i> ▶</span></div>
+      <input type="range" id="power" min="0" max="100" value="30">
+    </div>
+    <button id="fire">發射<br><small>點擊開始</small></button>
+    <button id="push" title="PUSH"></button>
+  </div>
+</div>
+
+<div id="scrim"></div>
+<aside id="drawer">
+  <div class="hd"><span>選單</span><button class="ib" id="btnClose">✕</button></div>
+  <div class="bd">
+    <h3>音量</h3>
+    <div class="row"><label>影片</label><input type="range" id="volVid" min="0" max="100" value="80"></div>
+    <div class="row"><label>音效</label><input type="range" id="volSfx" min="0" max="100" value="60"></div>
+    <div class="row"><label>演出</label><select id="optSkip" class="btn" style="flex:1"><option value="0">完整播放</option><option value="1">長影片可點液晶跳過</option></select></div>
+    <h3>統計</h3>
+    <table id="stats"></table>
+    <h3>大當り履歴</h3>
+    <div id="hist">還沒有大當り</div>
+    <h3>演出信賴度</h3>
+    <table>
+      <tr><th>演出</th><th>信賴度</th></tr>
+      <tr><td>ノーマルリーチ</td><td>約 1%</td></tr>
+      <tr><td>SPリーチ（耿鬼）</td><td>約 12%</td></tr>
+      <tr><td>SPSPリーチ（超夢）</td><td>約 48%</td></tr>
+      <tr><td>全回轉（夢幻）</td><td>必中</td></tr>
+      <tr><td>夢幻泡泡（プレミア）</td><td>必中</td></tr>
+      <tr><td>保留：藍／綠／紅／金／虹</td><td>低／中／高／超高／必中</td></tr>
+      <tr><td>群予告（波波）</td><td>約 30%</td></tr>
+      <tr><td>紅色カットイン（噴火龍）</td><td>約 60%</td></tr>
+      <tr><td>擬似連 ×3</td><td>約 70%</td></tr>
+      <tr><td>ステップアップ 5 階</td><td>約 80%</td></tr>
+    </table>
+    <h3>玩法</h3>
+    <p style="color:var(--dim);font-size:13px;margin:0">按「發射」開始打珠，拉桿調力道。通常時用<b>左打ち</b>讓珠子進液晶下方的中央入賞口（ヘソ）抽獎；大當り和 RUSH 中改<b>右打ち</b>，珠子會進右側的電チュー和大獎口。SP／SPSP 高潮時按 PUSH 揭曉。鍵盤：空白鍵＝發射、←→＝力道、Enter＝PUSH、P＝暫停。</p>
+    <h3>其他</h3>
+    <button class="btn" id="btnRefill">補充 1000 顆</button>
+    <button class="btn warn" id="btnReset">全部重來</button>
+  </div>
+</aside>
+
+<div class="overlay" id="startOv">
+  <img src="assets/ui/logo.webp" alt="雷光RUSH">
+  <p>仿近代日本數位柏青哥的網頁遊戲。演出影片用 MiniMax H3 生成。<br>建議開聲音遊玩。</p>
+  <button class="go" id="btnStart">點一下開始</button>
+  <p id="loadTxt">載入中…</p>
+</div>
+<div class="overlay hide" id="pauseOv"><h2>暫停中</h2><button class="go" id="btnResume">繼續</button></div>
+<div id="vids"></div>
+<script src="game.js?v=3"></script>
+</body>
+</html>
