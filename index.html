@@ -49,6 +49,9 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 #drawer .row input{flex:1;height:26px}
 .btn{border:1px solid var(--line);background:var(--panel);color:var(--txt);border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer;margin:4px 4px 4px 0}
 .btn.warn{border-color:#5a2230;color:#ff8a96}
+#drawer table.holes td,#drawer table.holes th{vertical-align:top;text-align:left}
+#drawer table.holes td:first-child{width:38%;padding-right:6px}
+#drawer table.holes small{color:var(--dim)}
 #hist{font-size:13px;color:var(--dim);max-height:160px;overflow:auto}
 #scrim{position:fixed;inset:0;background:#0008;z-index:19;display:none}
 #scrim.on{display:block}
@@ -114,6 +117,18 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     </table>
     <h3>玩法</h3>
     <p style="color:var(--dim);font-size:13px;margin:0">按「發射」開始打珠，拉桿調力道。通常時用<b>左打ち</b>讓珠子進液晶下方的中央入賞口（ヘソ）抽獎；大當り和 RUSH 中改<b>右打ち</b>，珠子會進右側的電チュー和大獎口。SP／SPSP 高潮時按 PUSH 揭曉。鍵盤：空白鍵＝發射、←→＝力道、Enter＝PUSH、P＝暫停。</p>
+    <h3>洞口說明</h3>
+    <p style="color:var(--dim);font-size:13px;margin:0 0 6px">左打ち＝拉桿拉小，珠子往左邊掉；右打ち＝拉桿拉大，珠子越過液晶上方屋頂往右邊掉。</p>
+    <table class="holes">
+      <tr><th>洞口</th><th>進去會怎樣</th></tr>
+      <tr><td><b>START</b><br><small>液晶正下方金框（ヘソ）</small></td><td>+3 顆，<b>抽一次大獎</b>。轉輪在轉時先存成「保留」，最多 4 個（液晶下方的彩色球）。<br><small>通常時，左打ち</small></td></tr>
+      <tr><td><b>GATE</b><br><small>右側通道上方弧形</small></td><td>不給珠，讓電チュー打開。<br><small>右打ち一定會經過</small></td></tr>
+      <tr><td><b>電チュー</b><br><small>右側通道中段紅翅膀</small></td><td>+1 顆，也會抽大獎。平常幾乎不開，<b>RUSH 中</b>每次過 GATE 開約 2 秒。<br><small>RUSH 中，右打ち</small></td></tr>
+      <tr><td><b>ATTACKER</b><br><small>右下金色斜板（大獎口）</small></td><td>只在<b>大当り</b>時開。每顆 +15，每回合 10 顆或 25 秒，10R 約 1,500 顆。<br><small>大当り中，右打ち</small></td></tr>
+      <tr><td><b>紫框小洞</b><br><small>左下、中下（一般入賞口）</small></td><td>+5 顆，不抽獎。</td></tr>
+      <tr><td><b>OUT</b><br><small>最下面黑色橢圓</small></td><td>沒進任何洞的珠子從這裡回收。</td></tr>
+    </table>
+    <p style="color:var(--dim);font-size:13px;margin:6px 0 0">簡單說：平常左打ち進 START 抽獎；中大獎或 RUSH 時改右打ち，進大獎口和電チュー拿鋼珠。選錯邊時棋盤中間會閃字提醒換邊。</p>
     <h3>其他</h3>
     <button class="btn" id="btnRefill">補充 1000 顆</button>
     <button class="btn warn" id="btnReset">全部重來</button>
@@ -128,6 +143,6 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 </div>
 <div class="overlay hide" id="pauseOv"><h2>暫停中</h2><button class="go" id="btnResume">繼續</button></div>
 <div id="vids"></div>
-<script src="game.js?v=3"></script>
+<script src="game.js?v=4"></script>
 </body>
 </html>
