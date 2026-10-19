@@ -7,7 +7,7 @@ const PR = 4.2;         // peg radius
 const G = 1500;         // gravity px/s^2
 const FIRE_INTERVAL = 0.6; // s (100 balls/min)
 // POW_NOISE spreads each shot's speed so the START entry rate is flat (~7%) instead of jumping with tiny power changes
-let POW_MIN = 80, POW_RANGE = 700, POW_NOISE = 40, ROAD_GAP = 21, ROAD_END = 64, HESO_W = 14, FUNNEL = 70;
+let POW_MIN = 80, POW_RANGE = 700, POW_NOISE = 40, ROAD_GAP = 21, ROAD_END = 64, HESO_W = 12, FUNNEL = 70;
 const POWER_L = 0.25, POWER_R = 0.6;   // 左打／右打 are fixed powers
 const SAVE_KEY = 'pk_modern_v2', START_BALLS = 2000, LEND = 500;
 const P_NORMAL = 1 / 99, P_RUSH = 1 / 12, ST_SPINS = 20;
@@ -21,10 +21,19 @@ const anyHave = ns => { const ok = ns.filter(has); return ok.length ? ok[rnd() *
 // clip names by role; missing ones are skipped
 const IDLE = ['01_idle', '15_idle_bulbasaur', '16_idle_pikachu', '17_idle_charizard_day', '18_idle_squirtle', '19_idle_eevee', '20_idle_snorlax', '73_idle_charmander', '74_idle_meowth', '75_idle_gengar'];
 const SYM_NAME = [null, 'bulbasaur', 'charmander', 'squirtle', 'pikachu', 'eevee', 'snorlax', 'meowth', 'gengar', 'mewtwo'];
-const REACH_CLIP = n => `${20 + n}_reach_${SYM_NAME[n]}`;
-const WIN_CLIP = n => n <= 5 ? `${29 + n}_win_${SYM_NAME[n]}` : `${29 + n}_cap_${SYM_NAME[n]}`;
-const LOSE_CLIPS = n => n <= 5 ? ['39_lose_partner', '70_lose_partner_b'] : ['40_lose_wild', '71_lose_wild_b'];
-const ROUND_BG = ['68_round_dance', '69_round_fly', '76_round_splash', '11_jackpot'];
+// every number keeps its own Pokémon from reach to result. New clips (1xx/2xx/3xx…, no music) win over the older ones.
+const REACH_CLIP = n => firstHave(`${320 + n}_reach_${SYM_NAME[n]}`, `${20 + n}_reach_${SYM_NAME[n]}`);
+const WIN_CLIP = n => firstHave(`2${n}0_${n <= 5 ? 'win' : 'cap'}_${SYM_NAME[n]}`, n <= 5 ? `${29 + n}_win_${SYM_NAME[n]}` : `${29 + n}_cap_${SYM_NAME[n]}`);
+const LOSE_CLIP = n => firstHave(`1${n}4_lose_${SYM_NAME[n]}`) || anyHave(n <= 5 ? ['39_lose_partner', '70_lose_partner_b'] : ['40_lose_wild', '71_lose_wild_b']);
+// the number's own 強／超強聽牌: [opening, win (null = go straight to the number's win clip), battle lost]
+const NUM_LINE = (n, sp) => { const a = `1${n}${sp ? 1 : 2}_${sp ? 'sp' : 'spsp'}_${SYM_NAME[n]}`, c = `1${n}3_blose_${SYM_NAME[n]}`; return has(a) && has(c) ? [a, null, c] : null; };
+const ROUND_LIST = () => { const l = ['401_round_dance', '402_round_fly', '403_round_splash', '404_round_parade', '405_round_beach', '406_round_carnival'].filter(has); return l.length ? l : ['68_round_dance', '69_round_fly', '76_round_splash', '11_jackpot'].filter(has); };
+const RUSH_LIST = () => { const l = ['411_rush_sunset', '412_rush_storm', '413_rush_ocean'].filter(has); return l.length ? l : ['13_rush_loop']; };
+const NEWER = { '02_group': '502_group_pidgey', '03_cutin': '503_cutin_red', '60_cutin_blue': '560_cutin_blue', '61_cutin_green': '561_cutin_green', '62_cutin_gold': '562_cutin_gold',
+  '63_group_caterpie': '563_group_caterpie', '64_group_magikarp': '564_group_magikarp', '10_zenkaiten': '510_zenkaiten', '12_rush_in': '512_rush_in', '14_premium': '514_premium_mew',
+  '65_premium_shiny': '565_premium_shiny', '56_chain_ride': '556_chain_ride', '57_chain_mega': '557_chain_mega', '58_chain_hooh': '558_chain_hooh', '59_rush_end': '559_rush_end',
+  '66_upgrade_evolve': '566_upgrade_evolve', '67_round_end': '567_round_end', '72_rush_last': '572_rush_last' };
+const V = n => (NEWER[n] && has(NEWER[n])) ? NEWER[n] : n;   // no-music remake when it exists
 const RUSH_LINES = [['50_rush_blastoise_reach', '51_rush_blastoise_win', '52_rush_blastoise_lose'], ['53_rush_gyarados_reach', '54_rush_gyarados_win', '55_rush_gyarados_lose']];
 const PARTNER = n => n <= 5;
 const CUT_CLIP = { blue: '60_cutin_blue', green: '61_cutin_green', red: '03_cutin', gold: '62_cutin_gold' };
@@ -237,7 +246,7 @@ function buildGeo() {
   g.pegs.push(...road);
   if (FUNNEL) g.segs.push([g.hesoX - FUNNEL, g.hesoY - 64, g.hesoX - HESO_W - 8, g.hesoY - 30], [g.hesoX + FUNNEL, g.hesoY - 64, g.hesoX + HESO_W + 8, g.hesoY - 30]);
   // peg field
-  const top = ly1 + 74, bot = H - 96;
+  const top = ly1 + 74, bot = H - 140;   // the band below the pegs is the 8-bit stage
   let row = 0;
   for (let y = top; y < bot; y += 44, row++) {
     for (let x = 44 + (row % 2 ? 24 : 0); x < g.laneX - 14; x += 48) {
@@ -259,6 +268,9 @@ function buildGeo() {
   for (let y = ly1 + 70, i = 0; y < g.attY - 70; y += 54, i++) { if (Math.abs(y - g.denY) < 40) continue; g.pegs.push({ x: i % 2 ? 660 : 684, y, hit: 0 }); }
   // pocket rims
   for (const p of g.pockets) g.pegs.push({ x: p.x - 18, y: p.y + 2, hit: 0 }, { x: p.x + 18, y: p.y + 2, hit: 0 });
+  // a peg that leaves a gap smaller than a ball next to a guide rail traps balls: drop those pegs
+  const segD = (p, sg) => { const [x1, y1, x2, y2] = sg, ex = x2 - x1, ey = y2 - y1; const t = Math.max(0, Math.min(1, ((p.x - x1) * ex + (p.y - y1) * ey) / (ex * ex + ey * ey))); return Math.hypot(p.x - x1 - ex * t, p.y - y1 - ey * t); };
+  g.pegs = g.pegs.filter(p => g.segs.every(sg => { const d = segD(p, sg); return d < PR + 3 || d > PR + BR * 2 + 2; }) && !(p.x - PR - g.L > 2 && p.x - PR - g.L < BR * 2 + 2));
   geo = g;
   st.balls = st.balls.filter(b => b.y < H);
 }
@@ -345,6 +357,9 @@ function stepBall(b, dt) {
     if (collideCircle(b, p.x, p.y, PR)) { p.hit = 0.25; if (Math.hypot(b.vx, b.vy) > 120) SFX.peg(); }
   }
   const sp = Math.hypot(b.vx, b.vy); if (sp > 1600) { b.vx *= 1600 / sp; b.vy *= 1600 / sp; }
+  // safety: a ball that sits still for over a second gets a small knock so it never stays stuck
+  b.still = sp < 25 ? (b.still || 0) + dt : 0;
+  if (b.still > 1) { b.vx += (rnd() < 0.5 ? -1 : 1) * (60 + rnd() * 60); b.vy -= 60; b.still = 0; }
   return checkTargets(b);
 }
 let simMode = false;
@@ -437,21 +452,29 @@ function nextIdle(cur = st.bg) {
   const ok = IDLE.filter(has), pool = ok.filter(n => n !== cur);
   return pool.length ? pool[rnd() * pool.length | 0] : ok[0];
 }
+// play a list of background clips one after another (jackpot rounds, RUSH) so nothing loops on screen
+function playList(list, start = 0) { st.bgList = list; st.bgIdx = start % list.length; setBg(list[st.bgIdx]); }
 function setBg(name) {
   st.hold = null;
   if (name === 'idle') name = nextIdle();
+  if (!(st.bgList && st.bgList.includes(name))) st.bgList = null;
   if (st.bg === name) { resumeBg(); return; }
   const old = st.bg; st.bg = name; st.next = null;
   if (old && old !== st.fg && has(old)) VID[old].pause();
   if (!name || !has(name)) return;
-  const idle = IDLE.includes(name);
-  const v = VID[name]; v.loop = !idle || IDLE.filter(has).length < 2;
+  const idle = IDLE.includes(name), list = st.bgList;
+  const v = VID[name]; v.loop = list ? list.length < 2 : !idle || IDLE.filter(has).length < 2;
   try { v.currentTime = 0; } catch (e) {}
   if (!st.fg && !st.paused) v.play().catch(() => {});
-  if (idle && !v.loop) { st.next = nextIdle(name); prefetch(st.next); }
+  if (list && !v.loop) { st.next = list[(st.bgIdx + 1) % list.length]; prefetch(st.next); }
+  else if (idle && !v.loop) { st.next = nextIdle(name); prefetch(st.next); }
 }
 // idle clips rotate: when one ends, the next random lead takes over
-for (const q of POOL) q.v.addEventListener('ended', () => { if (q.name === st.bg && IDLE.includes(q.name) && !st.fg) setBg(st.next || 'idle'); });
+for (const q of POOL) q.v.addEventListener('ended', () => {
+  if (q.name !== st.bg || st.fg) return;
+  if (st.bgList) { st.bgIdx = (st.bgIdx + 1) % st.bgList.length; setBg(st.bgList[st.bgIdx]); }
+  else if (IDLE.includes(q.name)) setBg(st.next || 'idle');
+});
 function playClip(name, opts = {}) {
   if (!name || !has(name)) return Promise.resolve(false);
   return new Promise(resolve => {
@@ -541,11 +564,11 @@ async function runSpin(h) {
   const fx = h.reach !== 'none' || h.step || h.giji;
   st.reelMode = 'mini';        // idle and plain spins keep the reels small so the idle clips stay visible
   startReels();
-  if (last) { banner('最後一轉！', 1600, '#ff4a5a'); await playClip('72_rush_last', { max: 3000 }); }
+  if (last) { banner('最後一轉！', 1600, '#ff4a5a'); await playClip(V('72_rush_last'), { max: 3000 }); }
   else if (residual) banner('殘保留', 1000, '#ffd23f');
   const fast = st.holds.length >= 3;
-  if (h.premium) { await playClip(anyHave(['14_premium', '65_premium_shiny'])); doFlash('#ff9cff', 0.8); unlock('premium'); }
-  if (h.group) await playClip(firstHave(GROUP_CLIP[h.groupKind], '02_group'));
+  if (h.premium) { await playClip(anyHave([V('14_premium'), V('65_premium_shiny')])); doFlash('#ff9cff', 0.8); unlock('premium'); }
+  if (h.group) await playClip(firstHave(V(GROUP_CLIP[h.groupKind]), V('02_group')));
   if (h.step > 0) { st.reelMode = 'big'; await stepUp(h.step); }
   for (let g = 0; g < h.giji; g++) {
     st.reelMode = 'big';
@@ -569,7 +592,7 @@ async function runSpin(h) {
     await wait(250);
     card(IMG.txt_reach, 1300); SFX.reach(); st.ledMode = 'reach';
     // the Pokémon of the reach number shows up (聽牌登場)
-    if (has(REACH_CLIP(n))) { st.reelMode = 'mini'; await playClip(REACH_CLIP(n), { keepBgPaused: true, hold: true, max: 3800 }); }
+    if (REACH_CLIP(n)) { st.reelMode = 'mini'; await playClip(REACH_CLIP(n), { keepBgPaused: true, hold: true, max: 3800 }); }
     else await wait(1300);
     if (h.reach === 'normal') {
       st.reelMode = 'big';
@@ -577,20 +600,21 @@ async function runSpin(h) {
       await glideReel(1, h.hit ? n : h.nums[1], st.rush ? 3.5 : 5.5, 0, st.rush ? 3.2 : 2.4);
       if (h.hit) st.landed = true;
       else {
-        const lc = !st.rush && anyHave(LOSE_CLIPS(n));
+        const lc = !st.rush && LOSE_CLIP(n);
         if (lc) { await wait(450); st.reelMode = 'mini'; await playClip(lc, { keepBgPaused: true, hold: true }); }
         await wait(300); st.hold = null; resumeBg();
       }
     } else {
       const sp = h.reach === 'sp';
+      const own = NUM_LINE(n, sp);
       const lines = RUSH_LINES.filter(x => x.every(has));
-      const rl = st.rush && sp && lines.length ? lines[h.line % lines.length] : null;
-      const L = rl || SP_LINES[h.spLine] || (sp ? SP_LINES.gengar : SP_LINES.mewtwo);
-      if (h.cutin) { st.reelMode = 'mini'; await playClip(firstHave(CUT_CLIP[h.cutCol], '03_cutin'), { keepBgPaused: true, hold: true }); if (h.cutCol === 'red' || h.cutCol === 'gold') { card(IMG.txt_gekiatsu, 1500); await wait(1500); } }
+      const rl = !own && st.rush && sp && lines.length ? lines[h.line % lines.length] : null;
+      const L = own || rl || SP_LINES[h.spLine] || (sp ? SP_LINES.gengar : SP_LINES.mewtwo);
+      if (h.cutin) { st.reelMode = 'mini'; await playClip(firstHave(V(CUT_CLIP[h.cutCol]), V('03_cutin')), { keepBgPaused: true, hold: true }); if (h.cutCol === 'red' || h.cutCol === 'gold') { card(IMG.txt_gekiatsu, 1500); await wait(1500); } }
       card(sp ? IMG.txt_chance : IMG.txt_gekiatsu, 1300); await wait(1100);
       st.reelMode = 'mini'; slowReel(1, 9);
       const win = h.hit && !h.revive;
-      await playClip(L[0], { keepBgPaused: true, hold: true, next: win ? (rl ? L[1] : WIN_CLIP(n)) : L[2] });
+      await playClip(L[0], { keepBgPaused: true, hold: true, next: win ? (rl ? L[1] : WIN_CLIP(n)) : L[2], max: st.rush ? 7000 : 0 });
       await pushChance(st.rush ? 2000 : 2500);
       if (win) {
         // SP／SPSP success goes straight to the number's own win clip in jackpot(); RUSH lines show Charizard winning first
@@ -599,7 +623,7 @@ async function runSpin(h) {
         await playClip(L[2], { keepBgPaused: true, hold: true });
         if (h.revive) {                         // 復活: the lose clip plays, then the Pokémon gets back up
           await wait(700); doFlash('#ffd23f'); banner('復活！', 1600, '#ffd23f'); SFX.fanfare();
-          await playClip(L[1], { keepBgPaused: true, hold: true }); unlock('revive');
+          if (L[1]) await playClip(L[1], { keepBgPaused: true, hold: true }); unlock('revive');
         }
       }
       st.reelMode = 'big';
@@ -653,7 +677,7 @@ async function zenkaiten(h) {
   card(IMG.txt_zenkaiten, 1600);
   for (const r of st.reels) { r.sync = true; r.speed = 7; }
   st.reelMode = 'mini';
-  await playClip('10_zenkaiten', { keepBgPaused: true, hold: true, next: WIN_CLIP(h.nums[0]) });
+  await playClip(V('10_zenkaiten'), { keepBgPaused: true, hold: true, next: WIN_CLIP(h.nums[0]) });
   st.reelMode = 'big';
   reelsQ();
   await wait(400);
@@ -689,15 +713,14 @@ async function jackpot(h) {
   // the clip: a chain milestone in RUSH, otherwise the number's own Pokémon wins or gets caught
   let clip = null;
   if (wasRush) clip = st.chain === 2 ? '56_chain_ride' : st.chain === 5 ? '57_chain_mega' : st.chain >= 10 && st.chain % 5 === 0 ? '58_chain_hooh' : null;
-  if (!has(clip)) clip = firstHave(WIN_CLIP(n), '11_jackpot');
+  clip = clip && has(V(clip)) ? V(clip) : firstHave(WIN_CLIP(n), '11_jackpot');
   st.reelMode = 'mini';
-  await playClip(clip, { next: ROUND_BG.find(has) });
+  await playClip(clip, { next: ROUND_LIST()[s.hits % ROUND_LIST().length] });
   // rounds
-  const rbg = ROUND_BG.filter(has);
+  playList(ROUND_LIST(), s.hits);   // each jackpot starts the round clips at a different one
   const startBalls = S.balls;
   st.payoutRound = 0;
   for (let r = 1; r <= h.rounds; r++) {
-    if (r % 3 === 1) setBg(rbg[((r - 1) / 3 + s.hits) % rbg.length]);
     st.round = { r, of: h.rounds };
     st.attacker.open = true; st.attacker.count = 0; SFX.open();
     const t0 = st.time;
@@ -710,7 +733,7 @@ async function jackpot(h) {
   void startBalls;
   if (h.upgrade && !wasRush) {
     st.reelMode = 'mini'; doFlash('#ffffff');
-    await playClip('66_upgrade_evolve');
+    await playClip(V('66_upgrade_evolve'));
     h.rushAfter = true; banner('昇格！RUSH 突入', 2200, '#ffd23f'); SFX.fanfare(); unlock('upgrade');
   }
   st.rushTotal = (wasRush || h.rushAfter ? (st.rushTotal || 0) : 0) + st.payoutRound;
@@ -728,17 +751,17 @@ async function jackpot(h) {
       setBg(null);
       st.reelMode = 'mini';
       card(IMG.txt_rush, 2400, { s: 0.95 });
-      await playClip('12_rush_in');
+      await playClip(V('12_rush_in'));
       st.rush = true;
       unlock('rush');
     } else banner('RUSH 繼續！', 1800, '#ffd23f');
     st.stLeft = ST_SPINS;
     st.ledMode = 'rush';
-    setBg('13_rush_loop');
+    if (!st.bgList || !RUSH_LIST().includes(st.bg)) playList(RUSH_LIST(), rnd() * 3 | 0);
   } else {
     st.rush = false; st.chain = 0; st.rushTotal = 0; st.ledMode = 'normal';
     setBg(null);
-    await playClip('67_round_end');
+    await playClip(V('67_round_end'));
     setBg('idle');
     banner('回到一般模式', 1800);
     autoSide(false);
@@ -754,7 +777,7 @@ async function endRush() {
   const best = total >= s.bestRush && s.rushEnds > 1;
   st.rush = false; st.ledMode = 'normal';
   setBg(null);
-  await playClip('59_rush_end', { keepBgPaused: true, hold: true });
+  await playClip(V('59_rush_end'), { keepBgPaused: true, hold: true });
   st.rushSum = { chain, total, best, t0: st.time };
   SFX.fanfare();
   await wait(4000);
@@ -884,6 +907,7 @@ function render() {
   if (st.shake > 0) { sx = (rnd() - 0.5) * 14 * st.shake; sy = (rnd() - 0.5) * 14 * st.shake; }
   ctx.save(); ctx.translate(sx, sy);
   drawBoard();
+  draw8bit();
   drawLCD();
   drawBalls();
   ctx.restore();
@@ -964,6 +988,101 @@ function drawBoard() {
   ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(W / 2, H - 14, 40, 12, 0, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#c9cbe0'; ctx.lineWidth = 2; ctx.stroke();
   // launch rail glow
   ctx.strokeStyle = '#ffffff22'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(g.L + 9, H - 40); ctx.lineTo(g.L + 9, g.cy); ctx.stroke();
+}
+// ---------- 8-bit strip in the lower board ----------
+// tiny pixel sprites ('.' = clear) drawn with 3px pixels just above the OUT hole
+const PX = { K: '#111', Y: '#ffd23f', R: '#ff3a4c', W: '#ffffff', B: '#7a4a12', O: '#ff8a2a', T: '#2a9a9a', C: '#ffe3a8', G: '#3fbf4f', g: '#2a8a3a' };
+const SPR = {
+  pika: [[
+    '..K.....K...',
+    '..YK...KY...',
+    '..YY...YY...',
+    '..YYYYYYY...',
+    '.YYKYYYKYY..',
+    '.YRYYYYYRYBY',
+    '.YYYYKYYYYYB',
+    '..YYYYYYY.Y.',
+    '..YYYYYYY...',
+    '..Y.Y..Y.Y..'], [
+    '..K.....K...',
+    '..YK...KY...',
+    '..YY...YY...',
+    '..YYYYYYY...',
+    '.YYKYYYKYY..',
+    '.YRYYYYYRYBY',
+    '.YYYYKYYYYYB',
+    '..YYYYYYY.Y.',
+    '..YYYYYYY...',
+    '...YY..YY...']],
+  ball: [[
+    '..KKK..',
+    '.KRRRK.',
+    'KRRRRRK',
+    'KKKWKKK',
+    'KWWWWWK',
+    '.KWWWK.',
+    '..KKK..']],
+  zard: [[
+    '......TT......',
+    '.....TTTT.....',
+    '..OO.TTTTT....',
+    '.OKOO.TTTTT...',
+    'OOOOOO.TTT....',
+    '.OOCCOOO......',
+    '...OCCOOOO..YY',
+    '....OOOOOOOYRY',
+    '.....O..O...Y.'], [
+    '..............',
+    '..OO..........',
+    '.OKOO.........',
+    'OOOOOOTTTT....',
+    '.OOCCOTTTTTT..',
+    '...OCCOTTTTTYY',
+    '....OOOOOOOYRY',
+    '.....O..O...Y.',
+    '..............']],
+  bang: [['KYK', 'KYK', 'KYK', '...', 'KYK']],
+};
+function pix(spr, frame, x, y, flip = false, P = 5) {
+  const rows = SPR[spr][frame % SPR[spr].length], w = rows[0].length;
+  for (let r = 0; r < rows.length; r++) for (let c = 0; c < w; c++) {
+    const ch = rows[r][flip ? w - 1 - c : c]; if (ch === '.') continue;
+    ctx.fillStyle = PX[ch]; ctx.fillRect(Math.round(x + c * P), Math.round(y + r * P), P, P);
+  }
+}
+function draw8bit() {
+  const P = 5, x0 = 44, x1 = W - 44, gy = H - 34, t = st.time;
+  ctx.save();
+  // the stage: a dark pixel sky with twinkling stars over the board background
+  const top = H - 128, sky = ctx.createLinearGradient(0, top, 0, gy);
+  sky.addColorStop(0, 'rgba(6,8,30,0)'); sky.addColorStop(0.35, 'rgba(6,8,30,0.55)'); sky.addColorStop(1, 'rgba(10,14,40,0.8)');
+  ctx.fillStyle = sky; ctx.fillRect(x0, top, x1 - x0, gy - top);
+  for (let i = 0; i < 14; i++) { if (((t * 2 + i * 0.37) | 0) % 3 === 0) continue; ctx.fillStyle = i % 3 ? '#cfd8ff' : PX.Y; ctx.fillRect(x0 + ((i * 53) % (x1 - x0)), top + 30 + ((i * 29) % 40), 3, 3); }
+  ctx.globalAlpha = 0.95;
+  // pixel grass
+  for (let x = x0; x < x1; x += P) { ctx.fillStyle = (x / P) % 2 ? PX.G : PX.g; ctx.fillRect(x, gy - (((x * 7) % 3 === 0) ? P : 0), P, P * 2); }
+  const span = x1 - x0 + 140;
+  if (st.inJackpot) {                       // pixel fireworks
+    for (let i = 0; i < 4; i++) {
+      const ph = (t * 0.8 + i * 0.27) % 1, cx = x0 + 30 + ((i * 131 + Math.floor(t * 0.8 + i * 0.27) * 97) % (x1 - x0 - 60)), cy = gy - 60;
+      const cols = [PX.Y, PX.R, PX.W, PX.T];
+      for (let k = 0; k < 10; k++) { const a = k / 10 * 6.283, d = ph * 40; ctx.globalAlpha = 0.9 * (1 - ph); ctx.fillStyle = cols[(i + k) % 4]; ctx.fillRect(Math.round(cx + Math.cos(a) * d), Math.round(cy + Math.sin(a) * d * 0.7), 4, 4); }
+    }
+    ctx.globalAlpha = 0.9;
+    pix('pika', (t * 6 | 0), x0 + (x1 - x0) / 2 - 30, gy - 50 - Math.abs(Math.sin(t * 6)) * 14);
+  } else if (st.rush) {                     // Charizard flying across, Pikachu cheering
+    const zx = x1 - ((t * 110) % (span + 100)) + 60;
+    pix('zard', (t * 5 | 0), zx, gy - 82 - Math.sin(t * 3) * 6);
+    pix('pika', (t * 8 | 0), x0 + 10, gy - 50 - Math.abs(Math.sin(t * 5)) * 8, true);
+  } else {                                  // Pikachu chasing a rolling Poké Ball
+    const reach = st.ledMode === 'reach';
+    st.p8off = (st.p8off || 0) + (reach ? t - (st.p8prev ?? t) : 0); st.p8prev = t;   // the chase pauses during 聽牌 without jumping
+    const tt = t - st.p8off, bx = x1 - ((tt * 70) % (span + 80)) + 40;
+    pix('ball', 0, bx, gy - 35 - Math.abs(Math.sin(tt * 5)) * 12);
+    pix('pika', reach ? 0 : (t * 8 | 0), bx + 70, gy - 50);
+    if (reach && (t * 4 | 0) % 2) pix('bang', 0, bx + 92, gy - 82);
+  }
+  ctx.restore();
 }
 function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 function drawBalls() {
@@ -1274,6 +1393,16 @@ window.__pk = {
     const b = st.balls[0], out = []; let t = 0, alive = true;
     while (t < sec && alive) { for (let i = 0; i < 12 && alive; i++) { alive = stepBall(b, 1 / 120); t += 1 / 120; } out.push([Math.round(b.x), Math.round(b.y)]); }
     st.balls = keep; st.power = p0; simMode = false; return out;
+  },
+  stuck(sec = 300, power = POWER_L) { // physics only: where balls sit still for over a second
+    simMode = true; const saveB = st.balls, saveBalls = S.balls; st.balls = [];
+    const p0 = st.power; st.power = power; let t = 0, ft = 0; const dt = 1 / 120, spots = {};
+    while (t < sec) {
+      t += dt; ft -= dt; if (ft <= 0) { ft += FIRE_INTERVAL; launch(); }
+      st.balls = st.balls.filter(b => stepBall(b, dt));
+      for (const b of st.balls) { if (b.rail !== null) continue; b.st2 = Math.hypot(b.vx, b.vy) < 25 ? (b.st2 || 0) + dt : 0; if (b.st2 > 0.9 && !b.rep) { b.rep = 1; const k = `${Math.round(b.x / 10) * 10},${Math.round(b.y / 10) * 10}`; spots[k] = (spots[k] || 0) + 1; } }
+    }
+    st.balls = saveB; S.balls = saveBalls; st.power = p0; simMode = false; return spots;
   },
   sim(sec = 60, power = 0.3) { // synchronous physics only, returns entry counts
     simMode = true; const saveB = st.balls, saveBalls = S.balls; st.balls = []; for (const k in simStats) simStats[k] = 0;

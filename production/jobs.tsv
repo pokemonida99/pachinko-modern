@@ -57,6 +57,81 @@ batch	name	sec	ref1	ref2	ref3
 5	74_idle_meowth	8	s7.png		
 5	75_idle_gengar	8	s8.png		
 5	76_round_splash	8	s3.png	s1.png	
+6	111_sp_bulbasaur	10	s1.png	s3.png	
+6	112_spsp_bulbasaur	12	s1.png	s3.png	
+6	113_blose_bulbasaur	5	s1.png	s3.png	
+6	114_lose_bulbasaur	5	s1.png		
+6	121_sp_charmander	10	s2.png	s1.png	
+6	122_spsp_charmander	12	s2.png	s1.png	
+6	123_blose_charmander	5	s2.png	s1.png	
+6	124_lose_charmander	5	s2.png		
+6	131_sp_squirtle	10	s3.png	s2.png	
+6	132_spsp_squirtle	12	s3.png	s2.png	
+6	133_blose_squirtle	5	s3.png	s2.png	
+6	134_lose_squirtle	5	s3.png		
+6	141_sp_pikachu	10	s4.png	s7.png	
+6	142_spsp_pikachu	12	s4.png	s7.png	
+6	143_blose_pikachu	5	s4.png	s7.png	
+6	144_lose_pikachu	5	s4.png		
+6	151_sp_eevee	10	s5.png	s8.png	
+6	152_spsp_eevee	12	s5.png	s8.png	
+6	153_blose_eevee	5	s5.png	s8.png	
+6	154_lose_eevee	5	s5.png		
+6	161_sp_snorlax	10	s4.png	s6.png	
+6	162_spsp_snorlax	12	s4.png	s6.png	
+6	163_blose_snorlax	5	s4.png	s6.png	
+6	164_lose_snorlax	5	s6.png		
+6	171_sp_meowth	10	s4.png	s7.png	
+6	172_spsp_meowth	12	s4.png	s7.png	
+6	173_blose_meowth	5	s4.png	s7.png	
+6	174_lose_meowth	5	s7.png		
+6	181_sp_gengar	10	s4.png	s8.png	
+6	182_spsp_gengar	12	s4.png	s8.png	
+6	183_blose_gengar	5	s4.png	s8.png	
+6	184_lose_gengar	5	s8.png		
+6	191_sp_mewtwo	10	s4.png	s9.png	
+6	192_spsp_mewtwo	12	s4.png	s9.png	
+6	193_blose_mewtwo	5	s4.png	s9.png	
+6	194_lose_mewtwo	5	s9.png		
+7	210_win_bulbasaur	6	s1.png	s3.png	
+7	220_win_charmander	6	s2.png	s1.png	
+7	230_win_squirtle	6	s3.png	s2.png	
+7	240_win_pikachu	6	s4.png	s7.png	
+7	250_win_eevee	6	s5.png	s8.png	
+7	260_cap_snorlax	6	s6.png		
+7	270_cap_meowth	6	s7.png		
+7	280_cap_gengar	6	s8.png		
+7	290_cap_mewtwo	6	s9.png		
+7	324_reach_pikachu	5	s4.png		
+7	326_reach_snorlax	5	s6.png		
+7	329_reach_mewtwo	5	s9.png		
+7	401_round_dance	15	s4.png	s5.png	
+7	402_round_fly	15	charizard.png	s4.png	
+7	403_round_splash	15	s3.png	s1.png	
+7	404_round_parade	15	s6.png	s4.png	
+7	405_round_beach	15	s2.png	s3.png	
+7	406_round_carnival	15	s7.png	s8.png	
+7	411_rush_sunset	15	charizard.png		
+7	412_rush_storm	15	charizard.png		
+7	413_rush_ocean	15	charizard.png		
+8	502_group_pidgey	5	s4.png		
+8	503_cutin_red	5	charizard.png		
+8	510_zenkaiten	6	s4.png		
+8	512_rush_in	8	charizard.png		
+8	514_premium_mew	5	s4.png		
+8	556_chain_ride	6	charizard.png	s4.png	
+8	557_chain_mega	6	charizard.png		
+8	558_chain_hooh	6	s4.png		
+8	559_rush_end	6	charizard.png		
+8	560_cutin_blue	5	s3.png		
+8	561_cutin_green	5	s1.png		
+8	562_cutin_gold	5	s4.png		
+8	563_group_caterpie	5	s1.png		
+8	564_group_magikarp	5	s3.png		
+8	565_premium_shiny	5	s5.png		
+8	566_upgrade_evolve	6	s5.png		
+8	567_round_end	5	s4.png		
+8	572_rush_last	5	charizard.png		
 9	60_cutin_blue	5	s3.png		
 9	61_cutin_green	5	s1.png		
 9	63_group_caterpie	5			
