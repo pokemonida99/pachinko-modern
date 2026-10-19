@@ -125,11 +125,11 @@ const S = {
   stats: Object.assign({}, STATS0, save?.stats),
   hist: save?.hist ?? [],
   slump: save?.slump ?? [0], slumpBase: save?.slumpBase ?? 0, slumpHits: save?.slumpHits ?? [],
-  ach: save?.ach ?? {},
+  ach: save?.ach ?? {}, p8char: save?.p8char ?? 0,
   volVid: save?.volVid ?? 80, volSfx: save?.volSfx ?? 60, mute: save?.mute ?? false, skip: save?.skip ?? '1', autoSide: save?.autoSide ?? true,
 };
 let dirty = true;
-function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ balls: S.balls, stats: S.stats, hist: S.hist.slice(0, 40), slump: S.slump, slumpBase: S.slumpBase, slumpHits: S.slumpHits.slice(-200), ach: S.ach, volVid: S.volVid, volSfx: S.volSfx, mute: S.mute, skip: S.skip, autoSide: S.autoSide })); } catch (e) {} }
+function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ balls: S.balls, stats: S.stats, hist: S.hist.slice(0, 40), slump: S.slump, slumpBase: S.slumpBase, slumpHits: S.slumpHits.slice(-200), ach: S.ach, p8char: S.p8char, volVid: S.volVid, volSfx: S.volSfx, mute: S.mute, skip: S.skip, autoSide: S.autoSide })); } catch (e) {} }
 setInterval(() => { if (dirty) { persist(); dirty = false; } }, 2000);
 
 // ---------- runtime state ----------
@@ -371,8 +371,10 @@ function thunder() {
   if (st.time < (st.thunderCD || 0)) return;
   st.thunderCD = st.time + 12; st.thunderT = st.time;
   for (const b of st.balls) if (b.rail === null) { b.boost = 1; b.vy = -(1550 + rnd() * 350); b.vx = (rnd() - 0.5) * 260; }
-  doFlash('#ffe14a', 0.55); st.shake = 0.6; SFX.thunder(); toast('⚡ 皮卡丘 十萬伏特！');
-  S.stats.thunder = (S.stats.thunder || 0) + 1; dirty = true; unlock('thunder');
+  const c = lead8(); st.p8fired = (S.p8char || 0) % CHAR8.length; st.p8swapAt = st.time + 1;   // switch to the next lead after the move
+  doFlash(c.flash, 0.55); st.shake = 0.6; SFX.thunder(); toast(`${c.icon} ${c.name} ${c.move}！`);
+  S.stats.thunder = (S.stats.thunder || 0) + 1; S.stats.moves = Object.assign({}, S.stats.moves, { [c.spr]: 1 }); dirty = true;
+  unlock('thunder'); if (CHAR8.every(x => S.stats.moves[x.spr])) unlock('allmoves');
 }
 let simMode = false;
 function checkTargets(b) {
@@ -820,7 +822,8 @@ const ACH = [
   ['deep', '深淵', '連續 500 轉沒中大獎', () => S.stats.hamari >= 500],
   ['push', '親手揭曉', '自己按揭曉鈕，結果是大獎'],
   ['revive', '復活', '看到寶可夢再站起來'],
-  ['thunder', '十萬伏特', '鋼珠打中下面的像素皮卡丘或寶貝球'],
+  ['thunder', '招式發動', '鋼珠打中下面的像素寶可夢或寶貝球'],
+  ['allmoves', '四大招式', '十萬伏特、飛葉快刀、水槍、噴射火焰都放過'],
   ['upgrade', '進化昇格', '3 回合最後進化成 RUSH'],
   ['zen', '全回轉', '看到夢幻全回轉'],
   ['premium', '夢幻泡泡', '看到稀有演出'],
@@ -1004,7 +1007,7 @@ function drawBoard() {
 }
 // ---------- 8-bit strip in the lower board ----------
 // tiny pixel sprites ('.' = clear) drawn with 3px pixels just above the OUT hole
-const PX = { K: '#111', Y: '#ffd23f', R: '#ff3a4c', W: '#ffffff', B: '#7a4a12', O: '#ff8a2a', T: '#2a9a9a', C: '#ffe3a8', G: '#3fbf4f', g: '#2a8a3a' };
+const PX = { K: '#111', Y: '#ffd23f', R: '#ff3a4c', W: '#ffffff', B: '#7a4a12', O: '#ff8a2a', T: '#2a9a9a', C: '#ffe3a8', G: '#3fbf4f', g: '#2a8a3a', A: '#6fd0b0', D: '#3f9a80', L: '#4fbf4f', U: '#7ec8f0', S: '#a8642a' };
 const SPR = {
   pika: [[
     '..K.....K...',
@@ -1054,6 +1057,69 @@ const SPR = {
     '....OOOOOOOYRY',
     '.....O..O...Y.',
     '..............']],
+  bulba: [[
+    '......LL....',
+    '.....LLLL...',
+    '....LLLLLL..',
+    '..AAALLLLAA.',
+    '.AAAAAAAAAA.',
+    '.ARAAADAAAA.',
+    '.AAAAAAADAA.',
+    '..AAAAAAAAA.',
+    '..AA.AA.AA..',
+    '..A..A..A...'], [
+    '......LL....',
+    '.....LLLL...',
+    '....LLLLLL..',
+    '..AAALLLLAA.',
+    '.AAAAAAAAAA.',
+    '.ARAAADAAAA.',
+    '.AAAAAAADAA.',
+    '..AAAAAAAAA.',
+    '...AA.AA.AA.',
+    '...A..A..A..']],
+  squirt: [[
+    '..UUUU......',
+    '.UUUUUU.....',
+    '.UKUUUU.....',
+    '.UUUUUUSS...',
+    '..UUUUSSSS..',
+    '..CCCUSSSS..',
+    '..CCCUUSS.UU',
+    '..CCCUU...UU',
+    '..UU.UU.....',
+    '..U...U.....'], [
+    '..UUUU......',
+    '.UUUUUU.....',
+    '.UKUUUU.....',
+    '.UUUUUUSS...',
+    '..UUUUSSSS..',
+    '..CCCUSSSS..',
+    '..CCCUUSS.UU',
+    '..CCCUU...UU',
+    '...UU.UU....',
+    '...U...U....']],
+  charm: [[
+    '..OOOO......',
+    '.OOOOOO.....',
+    '.OKOOOO.....',
+    '.OOOOOO.....',
+    '..OOOO......',
+    '..OCCOO...Y.',
+    '..OCCOOO.YRY',
+    '..OCCOOOOOY.',
+    '..OO.OO.....',
+    '..O...O.....'], [
+    '..OOOO......',
+    '.OOOOOO.....',
+    '.OKOOOO.....',
+    '.OOOOOO.....',
+    '..OOOO......',
+    '..OCCOO..Y..',
+    '..OCCOOO.YRY',
+    '..OCCOOOOOY.',
+    '...OO.OO....',
+    '...O...O....']],
   bang: [['KYK', 'KYK', 'KYK', '...', 'KYK']],
 };
 function pix(spr, frame, x, y, flip = false, P = 5) {
@@ -1064,7 +1130,17 @@ function pix(spr, frame, x, y, flip = false, P = 5) {
   }
   return { x, y, w: w * P, h: rows.length * P };
 }
+// the pixel lead changes after every move: Pikachu → Bulbasaur → Squirtle → Charmander → Pikachu
+const CHAR8 = [
+  { spr: 'pika', name: '皮卡丘', move: '十萬伏特', icon: '⚡', flash: '#ffe14a', cols: ['Y', 'W'] },
+  { spr: 'bulba', name: '妙蛙種子', move: '飛葉快刀', icon: '🍃', flash: '#7dff7a', cols: ['L', 'G'] },
+  { spr: 'squirt', name: '傑尼龜', move: '水槍', icon: '💧', flash: '#8fd8ff', cols: ['U', 'W'] },
+  { spr: 'charm', name: '小火龍', move: '噴射火焰', icon: '🔥', flash: '#ff9a3a', cols: ['O', 'Y'] },
+];
+const lead8 = () => CHAR8[(S.p8char || 0) % CHAR8.length];
 function draw8bit() {
+  if (st.p8swapAt && st.time >= st.p8swapAt) { st.p8swapAt = null; S.p8char = ((S.p8char || 0) + 1) % CHAR8.length; st.p8poof = st.time; dirty = true; }
+  const lead = (st.p8swapAt ? CHAR8[st.p8fired] : lead8()).spr;
   const hit = st.p8rects = [];   // boxes of the pixel Pikachu / Poké Ball a ball can hit (checked in stepBall)
   const P = 5, x0 = 44, x1 = W - 44, gy = H - 34, t = st.time;
   ctx.save();
@@ -1084,18 +1160,19 @@ function draw8bit() {
       for (let k = 0; k < 10; k++) { const a = k / 10 * 6.283, d = ph * 40; ctx.globalAlpha = 0.9 * (1 - ph); ctx.fillStyle = cols[(i + k) % 4]; ctx.fillRect(Math.round(cx + Math.cos(a) * d), Math.round(cy + Math.sin(a) * d * 0.7), 4, 4); }
     }
     ctx.globalAlpha = 0.9;
-    hit.push(pix('pika', (t * 6 | 0), x0 + (x1 - x0) / 2 - 30, gy - 50 - Math.abs(Math.sin(t * 6)) * 14));
+    hit.push(pix(lead, (t * 6 | 0), x0 + (x1 - x0) / 2 - 30, gy - 50 - Math.abs(Math.sin(t * 6)) * 14));
   } else if (st.rush) {                     // Charizard flying across, Pikachu cheering
     const zx = x1 - ((t * 110) % (span + 100)) + 60;
     pix('zard', (t * 5 | 0), zx, gy - 82 - Math.sin(t * 3) * 6);
-    hit.push(pix('pika', (t * 8 | 0), x0 + 10, gy - 50 - Math.abs(Math.sin(t * 5)) * 8, true));
+    hit.push(pix(lead, (t * 8 | 0), x0 + 10, gy - 50 - Math.abs(Math.sin(t * 5)) * 8, true));
   } else {                                  // Pikachu chasing a rolling Poké Ball
     const reach = st.ledMode === 'reach';
     st.p8off = (st.p8off || 0) + (reach ? t - (st.p8prev ?? t) : 0); st.p8prev = t;   // the chase pauses during 聽牌 without jumping
     const tt = t - st.p8off, bx = x1 - ((tt * 70) % (span + 80)) + 40;
     hit.push(pix('ball', 0, bx, gy - 35 - Math.abs(Math.sin(tt * 5)) * 12));
-    const pk = pix('pika', reach ? 0 : (t * 8 | 0), bx + 70, gy - 50); hit.push(pk);
+    const pk = pix(lead, reach ? 0 : (t * 8 | 0), bx + 70, gy - 50); hit.push(pk);
     if (st.time - (st.thunderT ?? -9) < 0.9) drawBolt(pk.x + pk.w / 2, pk.y);
+    if (st.time - (st.p8poof ?? -9) < 0.4) { const k = (st.time - st.p8poof) / 0.4; ctx.globalAlpha = 1 - k; ctx.fillStyle = '#ffffff'; for (let i = 0; i < 8; i++) { const a = i / 8 * 6.283; ctx.fillRect(Math.round(pk.x + pk.w / 2 + Math.cos(a) * k * 40) - 4, Math.round(pk.y + pk.h / 2 + Math.sin(a) * k * 30) - 4, 8, 8); } ctx.globalAlpha = 0.95; }
     if (reach && (t * 4 | 0) % 2) pix('bang', 0, bx + 92, gy - 82);
   }
   ctx.restore();
@@ -1104,7 +1181,7 @@ function draw8bit() {
 function drawBolt(x, y) {
   const k = st.time - st.thunderT; ctx.save(); ctx.globalAlpha = Math.max(0, 1 - k / 0.9);
   let cx = x, cy = y;
-  for (let i = 0; i < 30; i++) { const nx = cx + (((i * 37 + (st.time * 30 | 0)) % 3) - 1) * 12; ctx.fillStyle = i % 2 ? PX.Y : PX.W; ctx.fillRect(Math.round(nx) - 4, Math.round(cy - 32), 8, 32); cx = nx; cy -= 32; }
+  for (let i = 0; i < 30; i++) { const nx = cx + (((i * 37 + (st.time * 30 | 0)) % 3) - 1) * 12; const cc = CHAR8[st.p8fired ?? 0].cols; ctx.fillStyle = PX[cc[i % 2]]; ctx.fillRect(Math.round(nx) - 4, Math.round(cy - 32), 8, 32); cx = nx; cy -= 32; }
   ctx.restore();
 }
 function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
