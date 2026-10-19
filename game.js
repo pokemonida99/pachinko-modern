@@ -823,7 +823,7 @@ const ACH = [
   ['push', '親手揭曉', '自己按揭曉鈕，結果是大獎'],
   ['revive', '復活', '看到寶可夢再站起來'],
   ['thunder', '招式發動', '鋼珠打中下面的像素寶可夢或寶貝球'],
-  ['allmoves', '四大招式', '十萬伏特、飛葉快刀、水槍、噴射火焰都放過'],
+  ['allmoves', '四大招式', '十萬伏特、飛葉快刀、水槍、火花都放過'],
   ['upgrade', '進化昇格', '3 回合最後進化成 RUSH'],
   ['zen', '全回轉', '看到夢幻全回轉'],
   ['premium', '夢幻泡泡', '看到稀有演出'],
@@ -1135,7 +1135,7 @@ const CHAR8 = [
   { spr: 'pika', name: '皮卡丘', move: '十萬伏特', icon: '⚡', flash: '#ffe14a', cols: ['Y', 'W'] },
   { spr: 'bulba', name: '妙蛙種子', move: '飛葉快刀', icon: '🍃', flash: '#7dff7a', cols: ['L', 'G'] },
   { spr: 'squirt', name: '傑尼龜', move: '水槍', icon: '💧', flash: '#8fd8ff', cols: ['U', 'W'] },
-  { spr: 'charm', name: '小火龍', move: '噴射火焰', icon: '🔥', flash: '#ff9a3a', cols: ['O', 'Y'] },
+  { spr: 'charm', name: '小火龍', move: '火花', icon: '🔥', flash: '#ff9a3a', cols: ['O', 'Y'] },
 ];
 const lead8 = () => CHAR8[(S.p8char || 0) % CHAR8.length];
 function draw8bit() {
@@ -1175,7 +1175,28 @@ function draw8bit() {
     if (st.time - (st.p8poof ?? -9) < 0.4) { const k = (st.time - st.p8poof) / 0.4; ctx.globalAlpha = 1 - k; ctx.fillStyle = '#ffffff'; for (let i = 0; i < 8; i++) { const a = i / 8 * 6.283; ctx.fillRect(Math.round(pk.x + pk.w / 2 + Math.cos(a) * k * 40) - 4, Math.round(pk.y + pk.h / 2 + Math.sin(a) * k * 30) - 4, 8, 8); } ctx.globalAlpha = 0.95; }
     if (reach && (t * 4 | 0) % 2) pix('bang', 0, bx + 92, gy - 82);
   }
+  // the move's name pops up beside whoever fired it, in small pixel letters
+  const mk = st.time - (st.thunderT ?? -9), who = hit[hit.length - 1];
+  if (mk < 1.4 && who) {
+    const img = moveLabel(st.p8fired ?? 0), sc = 2;
+    ctx.globalAlpha = mk > 1 ? (1.4 - mk) / 0.4 : 1; ctx.imageSmoothingEnabled = false;
+    const lx = Math.min(x1 - img.width * sc, who.x + who.w + 6), ly = who.y - 8 - Math.min(1, mk / 0.3) * 18;
+    ctx.drawImage(img, Math.round(lx), Math.round(ly), img.width * sc, img.height * sc);
+    ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 1;
+  }
   ctx.restore();
+}
+// small canvas text drawn at 1/2 size and scaled up without smoothing, so it looks like pixel letters
+const LABELS = {};
+function moveLabel(i) {
+  if (LABELS[i]) return LABELS[i];
+  const c = CHAR8[i], cv2 = document.createElement('canvas'), g = cv2.getContext('2d'), fs = 11;
+  g.font = `900 ${fs}px "Noto Sans TC","PingFang TC",sans-serif`;
+  cv2.width = Math.ceil(g.measureText(c.move).width) + 4; cv2.height = fs + 5;
+  g.font = `900 ${fs}px "Noto Sans TC","PingFang TC",sans-serif`; g.textBaseline = 'top';
+  for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [1, 1]]) { g.fillStyle = '#111'; g.fillText(c.move, 2 + dx, 2 + dy); }
+  g.fillStyle = PX[c.cols[0]]; g.fillText(c.move, 2, 2);
+  return (LABELS[i] = cv2);
 }
 // pixel lightning from Pikachu up the board while 十萬伏特 is going
 function drawBolt(x, y) {
