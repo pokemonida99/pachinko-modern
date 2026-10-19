@@ -189,6 +189,7 @@ const SFX = {
   pay() { tone(2093, 0.05, 'square', 0.06); },
   stop() { tone(220, 0.06, 'square', 0.14, 110); noise(0.05, 0.08, 2000); },
   tick() { tone(1500, 0.035, 'square', 0.07); },
+  thunder() { noise(0.7, 0.35, 900); tone(1800, 0.5, 'sawtooth', 0.12, 120); tone(90, 0.6, 'square', 0.18, 45, 0.05); },
   spin() { tone(660, 0.05, 'triangle', 0.06, 990); },
   reach() { tone(330, 0.5, 'sawtooth', 0.12, 990); tone(660, 0.6, 'square', 0.08, 1320, 0.15); },
   step(l) { const f = [523, 659, 784, 988, 1319][l - 1] || 523; tone(f, 0.18, 'square', 0.14); tone(f * 1.5, 0.22, 'triangle', 0.1, null, 0.05); },
@@ -331,6 +332,8 @@ function stepBall(b, dt) {
   }
   if (b.x < g.L + BR) { b.x = g.L + BR; if (b.vx < 0) b.vx *= -0.4; }
   if (b.x > g.R - BR) { b.x = g.R - BR; if (b.vx > 0) b.vx *= -0.4; }
+  // 十萬伏特: a launched ball flies straight up through everything, then falls back normally
+  if (b.boost) { if (b.vy >= 0) b.boost = 0; else return true; }
   // LCD box
   const l = g.lcd;
   if (b.x > l.x0 - BR && b.x < l.x1 + BR && b.y > l.y0 - BR && b.y < l.y1 + BR) {
@@ -360,7 +363,16 @@ function stepBall(b, dt) {
   // safety: a ball that sits still for over a second gets a small knock so it never stays stuck
   b.still = sp < 25 ? (b.still || 0) + dt : 0;
   if (b.still > 1) { b.vx += (rnd() < 0.5 ? -1 : 1) * (60 + rnd() * 60); b.vy -= 60; b.still = 0; }
+  if (!simMode && st.p8rects && b.vy > 0) for (const r of st.p8rects) if (b.x > r.x - BR && b.x < r.x + r.w + BR && b.y > r.y - BR && b.y < r.y + r.h + BR) { thunder(); break; }
   return checkTargets(b);
+}
+// a ball hit the pixel Pikachu / Poké Ball: every ball on the board is thrown back to the top
+function thunder() {
+  if (st.time < (st.thunderCD || 0)) return;
+  st.thunderCD = st.time + 12; st.thunderT = st.time;
+  for (const b of st.balls) if (b.rail === null) { b.boost = 1; b.vy = -(1550 + rnd() * 350); b.vx = (rnd() - 0.5) * 260; }
+  doFlash('#ffe14a', 0.55); st.shake = 0.6; SFX.thunder(); toast('⚡ 皮卡丘 十萬伏特！');
+  S.stats.thunder = (S.stats.thunder || 0) + 1; dirty = true; unlock('thunder');
 }
 let simMode = false;
 function checkTargets(b) {
@@ -808,6 +820,7 @@ const ACH = [
   ['deep', '深淵', '連續 500 轉沒中大獎', () => S.stats.hamari >= 500],
   ['push', '親手揭曉', '自己按揭曉鈕，結果是大獎'],
   ['revive', '復活', '看到寶可夢再站起來'],
+  ['thunder', '十萬伏特', '鋼珠打中下面的像素皮卡丘或寶貝球'],
   ['upgrade', '進化昇格', '3 回合最後進化成 RUSH'],
   ['zen', '全回轉', '看到夢幻全回轉'],
   ['premium', '夢幻泡泡', '看到稀有演出'],
@@ -1049,8 +1062,10 @@ function pix(spr, frame, x, y, flip = false, P = 5) {
     const ch = rows[r][flip ? w - 1 - c : c]; if (ch === '.') continue;
     ctx.fillStyle = PX[ch]; ctx.fillRect(Math.round(x + c * P), Math.round(y + r * P), P, P);
   }
+  return { x, y, w: w * P, h: rows.length * P };
 }
 function draw8bit() {
+  const hit = st.p8rects = [];   // boxes of the pixel Pikachu / Poké Ball a ball can hit (checked in stepBall)
   const P = 5, x0 = 44, x1 = W - 44, gy = H - 34, t = st.time;
   ctx.save();
   // the stage: a dark pixel sky with twinkling stars over the board background
@@ -1069,19 +1084,27 @@ function draw8bit() {
       for (let k = 0; k < 10; k++) { const a = k / 10 * 6.283, d = ph * 40; ctx.globalAlpha = 0.9 * (1 - ph); ctx.fillStyle = cols[(i + k) % 4]; ctx.fillRect(Math.round(cx + Math.cos(a) * d), Math.round(cy + Math.sin(a) * d * 0.7), 4, 4); }
     }
     ctx.globalAlpha = 0.9;
-    pix('pika', (t * 6 | 0), x0 + (x1 - x0) / 2 - 30, gy - 50 - Math.abs(Math.sin(t * 6)) * 14);
+    hit.push(pix('pika', (t * 6 | 0), x0 + (x1 - x0) / 2 - 30, gy - 50 - Math.abs(Math.sin(t * 6)) * 14));
   } else if (st.rush) {                     // Charizard flying across, Pikachu cheering
     const zx = x1 - ((t * 110) % (span + 100)) + 60;
     pix('zard', (t * 5 | 0), zx, gy - 82 - Math.sin(t * 3) * 6);
-    pix('pika', (t * 8 | 0), x0 + 10, gy - 50 - Math.abs(Math.sin(t * 5)) * 8, true);
+    hit.push(pix('pika', (t * 8 | 0), x0 + 10, gy - 50 - Math.abs(Math.sin(t * 5)) * 8, true));
   } else {                                  // Pikachu chasing a rolling Poké Ball
     const reach = st.ledMode === 'reach';
     st.p8off = (st.p8off || 0) + (reach ? t - (st.p8prev ?? t) : 0); st.p8prev = t;   // the chase pauses during 聽牌 without jumping
     const tt = t - st.p8off, bx = x1 - ((tt * 70) % (span + 80)) + 40;
-    pix('ball', 0, bx, gy - 35 - Math.abs(Math.sin(tt * 5)) * 12);
-    pix('pika', reach ? 0 : (t * 8 | 0), bx + 70, gy - 50);
+    hit.push(pix('ball', 0, bx, gy - 35 - Math.abs(Math.sin(tt * 5)) * 12));
+    const pk = pix('pika', reach ? 0 : (t * 8 | 0), bx + 70, gy - 50); hit.push(pk);
+    if (st.time - (st.thunderT ?? -9) < 0.9) drawBolt(pk.x + pk.w / 2, pk.y);
     if (reach && (t * 4 | 0) % 2) pix('bang', 0, bx + 92, gy - 82);
   }
+  ctx.restore();
+}
+// pixel lightning from Pikachu up the board while 十萬伏特 is going
+function drawBolt(x, y) {
+  const k = st.time - st.thunderT; ctx.save(); ctx.globalAlpha = Math.max(0, 1 - k / 0.9);
+  let cx = x, cy = y;
+  for (let i = 0; i < 30; i++) { const nx = cx + (((i * 37 + (st.time * 30 | 0)) % 3) - 1) * 12; ctx.fillStyle = i % 2 ? PX.Y : PX.W; ctx.fillRect(Math.round(nx) - 4, Math.round(cy - 32), 8, 32); cx = nx; cy -= 32; }
   ctx.restore();
 }
 function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
